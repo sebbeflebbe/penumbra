@@ -1,0 +1,14 @@
+---
+description: Penumbra agent principles — privacy, Supabase, EAA, themes, GitHub Issues ritual
+alwaysApply: true
+---
+
+# Penumbra
+
+- Product stays small. Domain has no Flutter and no Supabase. Tests use the in-memory studio.
+- Cloud: both `SUPABASE_URL` and `SUPABASE_ANON_KEY`, or neither. Half-set fails closed.
+- Never send the whole board to a model. Echo = one slip + consent, or local voice.
+- EAA/EN 301 549 is the accessibility bar. Do not claim full conformance. High-contrast is true B/W.
+- Themes persist. Canvas ritual: Place, nearby echo, Index as conversation.
+- GitHub Issues + Project is the development Kanban: `status:in-progress` before coding, close + comment when landed. Use `gh`, not Atlassian.
+- Honesty over badges. Making-of and ADRs stay true.

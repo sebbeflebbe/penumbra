@@ -1,0 +1,111 @@
+name: project-board
+
+on:
+  issues:
+    types: [opened, labeled, closed, reopened]
+  pull_request:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  sync:
+    if: ${{ vars.PENUMBRA_PROJECT_NUMBER != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync GitHub Project status
+        env:
+          PROJECTS_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_NUMBER: ${{ vars.PENUMBRA_PROJECT_NUMBER }}
+          OWNER: sebbeflebbe
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          ISSUE_NODE: ${{ github.event.issue.node_id }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABEL_NAME: ${{ github.event.label.name }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PROJECTS_TOKEN}" ]; then
+            echo "PROJECTS_TOKEN is not set; skipping Projects v2 sync."
+            exit 0
+          fi
+          export GH_TOKEN="${PROJECTS_TOKEN}"
+
+          meta=$(gh api graphql -f query='
+            query($owner: String!, $number: Int!) {
+              user(login: $owner) {
+                projectV2(number: $number) {
+                  id
+                  field(name: "Status") {
+                    ... on ProjectV2SingleSelectField {
+                      id
+                      options { id name }
+                    }
+                  }
+                }
+              }
+            }' -F owner="$OWNER" -F number="$PROJECT_NUMBER")
+
+          project_id=$(echo "$meta" | jq -r '.data.user.projectV2.id')
+          field_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.id')
+          todo_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.options[]? | select(.name=="To do" or .name=="Todo") | .id' | head -n1)
+          progress_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.options[]? | select(.name=="In Progress") | .id' | head -n1)
+          done_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.options[]? | select(.name=="Done") | .id' | head -n1)
+
+          if [ -z "$project_id" ] || [ "$project_id" = "null" ]; then
+            echo "Could not load project $OWNER/$PROJECT_NUMBER"
+            exit 0
+          fi
+
+          add_and_set() {
+            local content_id="$1"
+            local option_id="$2"
+            if [ -z "$content_id" ] || [ "$content_id" = "null" ] || [ -z "$option_id" ]; then
+              return 0
+            fi
+            item_id=$(gh api graphql -f query='
+              mutation($project: ID!, $content: ID!) {
+                addProjectV2ItemById(input: {projectId: $project, contentId: $content}) {
+                  item { id }
+                }
+              }' -f project="$project_id" -f content="$content_id" | jq -r '.data.addProjectV2ItemById.item.id')
+            gh api graphql -f query='
+              mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $project
+                  itemId: $item
+                  fieldId: $field
+                  value: { singleSelectOptionId: $option }
+                }) { projectV2Item { id } }
+              }' -f project="$project_id" -f item="$item_id" -f field="$field_id" -f option="$option_id" >/dev/null
+          }
+
+          if [ "$EVENT_NAME" = "issues" ]; then
+            case "$EVENT_ACTION" in
+              opened|reopened)
+                add_and_set "$ISSUE_NODE" "$todo_id"
+                ;;
+              closed)
+                add_and_set "$ISSUE_NODE" "$done_id"
+                ;;
+              labeled)
+                if [ "$LABEL_NAME" = "status:in-progress" ]; then
+                  add_and_set "$ISSUE_NODE" "$progress_id"
+                fi
+                ;;
+            esac
+          fi
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            numbers=$(echo "${PR_BODY:-}" | grep -Eo '(Fixes|Closes|Resolves)[[:space:]]+#[0-9]+' | grep -Eo '[0-9]+' || true)
+            for n in $numbers; do
+              node=$(gh api "repos/${REPOSITORY}/issues/${n}" --jq .node_id)
+              add_and_set "$node" "$progress_id"
+            done
+          fi
