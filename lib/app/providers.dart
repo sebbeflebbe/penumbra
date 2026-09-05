@@ -14,13 +14,17 @@ import '../features/studio/in_memory_studio.dart';
 import '../features/studio/studio_repositories.dart';
 import 'theme.dart';
 
-final configProvider = Provider<PenumbraConfig>((ref) => PenumbraConfig.fromEnvironment());
+final configProvider = Provider<PenumbraConfig>(
+  (ref) => PenumbraConfig.fromEnvironment(),
+);
 
 final studioProvider = Provider<InMemoryStudio>((ref) {
   throw StateError('studioProvider must be overridden in bootstrap.');
 });
 
-final authRepositoryProvider = Provider<AuthRepository>((ref) => ref.watch(studioProvider));
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => ref.watch(studioProvider),
+);
 
 final boardRepositoryProvider = Provider<BoardRepository>(
   (ref) => InMemoryBoardRepository(ref.watch(studioProvider)),
@@ -30,7 +34,9 @@ final canvasRepositoryProvider = Provider<CanvasRepository>(
   (ref) => InMemoryCanvasRepository(ref.watch(studioProvider)),
 );
 
-final privacyRepositoryProvider = Provider<PrivacyRepository>((ref) => ref.watch(studioProvider));
+final privacyRepositoryProvider = Provider<PrivacyRepository>(
+  (ref) => ref.watch(studioProvider),
+);
 
 final echoPromptProvider = Provider<String>((ref) => kPenumbraEchoSystemPrompt);
 
@@ -56,7 +62,8 @@ class AuthController extends StateNotifier<AsyncValue<AuthUser?>> {
   Future<AuthFailure?> signUpPassword(String email, String password) =>
       _unwrap(_auth.signUpWithPassword(email: email, password: password));
 
-  Future<AuthFailure?> magicLink(String email) async => (await _auth.sendMagicLink(email: email)).errOrNull;
+  Future<AuthFailure?> magicLink(String email) async =>
+      (await _auth.sendMagicLink(email: email)).errOrNull;
 
   Future<AuthFailure?> google() => _unwrap(_auth.signInWithGoogle());
   Future<AuthFailure?> github() => _unwrap(_auth.signInWithGitHub());
@@ -65,14 +72,17 @@ class AuthController extends StateNotifier<AsyncValue<AuthUser?>> {
 
   Future<void> signOut() => _auth.signOut();
 
-  Future<AuthFailure?> _unwrap(Future<Result<AuthUser, AuthFailure>> future) async {
+  Future<AuthFailure?> _unwrap(
+    Future<Result<AuthUser, AuthFailure>> future,
+  ) async {
     return (await future).errOrNull;
   }
 }
 
-final authControllerProvider = StateNotifierProvider<AuthController, AsyncValue<AuthUser?>>((ref) {
-  return AuthController(ref.watch(authRepositoryProvider));
-});
+final authControllerProvider =
+    StateNotifierProvider<AuthController, AsyncValue<AuthUser?>>((ref) {
+      return AuthController(ref.watch(authRepositoryProvider));
+    });
 
 class AppearanceController extends StateNotifier<PenumbraAppearance> {
   AppearanceController({
@@ -93,6 +103,7 @@ class AppearanceController extends StateNotifier<PenumbraAppearance> {
   }
 }
 
-final appearanceProvider = StateNotifierProvider<AppearanceController, PenumbraAppearance>(
-  (ref) => AppearanceController(),
-);
+final appearanceProvider =
+    StateNotifierProvider<AppearanceController, PenumbraAppearance>(
+      (ref) => AppearanceController(),
+    );

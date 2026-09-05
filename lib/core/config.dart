@@ -39,16 +39,23 @@ class PenumbraConfig {
   final String productionOrigin;
   final String geminiApiKey;
 
-  bool get hasRemoteBackend => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+  bool get hasRemoteBackend =>
+      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
   bool get hasGemini => geminiApiKey.trim().isNotEmpty;
 
-  StudioMode get studioMode => resolveStudioMode(supabaseUrl: supabaseUrl, supabaseAnonKey: supabaseAnonKey);
+  StudioMode get studioMode => resolveStudioMode(
+    supabaseUrl: supabaseUrl,
+    supabaseAnonKey: supabaseAnonKey,
+  );
 }
 
 enum StudioMode { memory, supabase }
 
 /// Both dart-defines, or neither. A half-set config fails closed.
-StudioMode resolveStudioMode({required String supabaseUrl, required String supabaseAnonKey}) {
+StudioMode resolveStudioMode({
+  required String supabaseUrl,
+  required String supabaseAnonKey,
+}) {
   final url = supabaseUrl.trim();
   final key = supabaseAnonKey.trim();
   if (url.isEmpty && key.isEmpty) return StudioMode.memory;

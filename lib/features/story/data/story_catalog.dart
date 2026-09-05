@@ -1,5 +1,10 @@
 class StoryChapter {
-  const StoryChapter({required this.id, required this.title, required this.control, required this.body});
+  const StoryChapter({
+    required this.id,
+    required this.title,
+    required this.control,
+    required this.body,
+  });
 
   final String id;
   final String title;
@@ -36,9 +41,9 @@ We did not pull Google Fonts at runtime. Forui already ships Inter. Display type
       title: 'Auth',
       control: 'eIDAS 2 / GDPR Art. 32',
       body: '''
-Five methods: passkeys, Google, GitHub, magic link, password. Passkeys are first in the layout because they are phishing-resistant. Passwords are last and must be twelve characters. OAuth providers are independent controllers for their own identity data.
+Five methods: passkeys, Google, GitHub, magic link, password. Passkeys are first in the layout because they are phishing-resistant. On the cloud path they are real WebAuthn against Supabase Auth; the in-memory studio still fakes a passkey session so reviewers need no authenticator. Passwords are last and must be twelve characters. OAuth providers are independent controllers for their own identity data.
 
-OAuth users do not have a password to derive a wrapping key. They get a twelve-word recovery phrase once. That tradeoff is the honest part of the encryption story.
+OAuth users do not have a password to derive a wrapping key. They get a twelve-word recovery phrase once. That tradeoff is the honest part of the encryption story. WebAuthn PRF wrapping is still future work.
 ''',
     ),
     StoryChapter(
@@ -46,9 +51,9 @@ OAuth users do not have a password to derive a wrapping key. They get a twelve-w
       title: 'Canvas and crypto',
       control: 'GDPR Art. 32 / NIS2 crypto policy',
       body: '''
-Cards are widgets, not paint, so they exist in the semantics tree. A list beside the canvas is the screen-reader order. Arrow keys move the focused card.
+Cards are widgets, not paint, so they exist in the semantics tree. A list beside the canvas is the screen-reader order. Arrow keys or a named Move handle reposition the focused card. Human slips can be edited and deleted; deleting a parent also removes its echo.
 
-Payloads are AES-256-GCM. Tests assert the stored form does not contain plaintext, and that another user cannot read a board (the RLS contract).
+Payloads are AES-256-GCM. Tests assert the stored form does not contain plaintext, and that another user cannot read a board (the RLS contract). Restricted boards refuse writes, including delete (Art. 18).
 ''',
     ),
     StoryChapter(
@@ -101,6 +106,20 @@ The in-memory studio is still how tests and reviewers enter. When both Supabase 
 The European Accessibility Act applies from 28 June 2025. A personal notebook is likely outside its sectors. We still treat EN 301 549 as the bar — named themes that persist, high-contrast that is actually black and white, a canvas you can read without the spatial view.
 
 Development lives on GitHub Issues and a Project Kanban. The agent moves issues as this chat proceeds. That board is not a feature inside the studio.
+''',
+    ),
+    StoryChapter(
+      id: '09',
+      title: 'The four-week deepening',
+      control: 'Roadmap / GitHub Issues',
+      body: '''
+The studio already had a ritual. Four weeks deepened it rather than adding chrome.
+
+Place is reversible: edit, delete (with cascade), and a Move handle that yields the sheet pan while dragging. Recovery phrases can be acknowledged. Boards expose rename, delete, and Art. 18 restrict in the list the legal copy already promised. Remote echoes persist Art. 6(1)(a) consent. Erasure asks for the password the studio always required.
+
+Cloud passkeys call Supabase Auth WebAuthn plus the browser ceremony. The in-memory studio still fakes passkey, Google, GitHub, and magic link so CI never needs secrets. The DEK wrap for passkeys remains the twelve-word phrase; WebAuthn PRF is still future work.
+
+The plan is `docs/roadmap.md`. Issues #6–#13 are the board. This chapter is the retrospective, not a promise of work still undone.
 ''',
     ),
   ];

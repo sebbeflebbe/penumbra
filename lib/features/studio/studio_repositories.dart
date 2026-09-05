@@ -17,18 +17,23 @@ class InMemoryBoardRepository implements BoardRepository {
   Future<Result<Board, AppFailure>> getById(String id) => studio.getById(id);
 
   @override
-  Future<Result<Board, AppFailure>> create({required String title}) => studio.create(title: title);
+  Future<Result<Board, AppFailure>> create({required String title}) =>
+      studio.create(title: title);
 
   @override
-  Future<Result<Board, AppFailure>> rename({required String id, required String title}) =>
-      studio.rename(id: id, title: title);
+  Future<Result<Board, AppFailure>> rename({
+    required String id,
+    required String title,
+  }) => studio.rename(id: id, title: title);
 
   @override
   Future<Result<void, AppFailure>> delete(String id) => studio.delete(id);
 
   @override
-  Future<Result<Board, AppFailure>> setRestricted({required String id, required bool restricted}) =>
-      studio.setRestricted(id: id, restricted: restricted);
+  Future<Result<Board, AppFailure>> setRestricted({
+    required String id,
+    required bool restricted,
+  }) => studio.setRestricted(id: id, restricted: restricted);
 }
 
 class InMemoryCanvasRepository implements CanvasRepository {
@@ -36,13 +41,16 @@ class InMemoryCanvasRepository implements CanvasRepository {
   final InMemoryStudio studio;
 
   @override
-  Future<Result<List<BoardNode>, AppFailure>> listNodes(String boardId) => studio.listNodes(boardId);
+  Future<Result<List<BoardNode>, AppFailure>> listNodes(String boardId) =>
+      studio.listNodes(boardId);
 
   @override
-  Future<Result<BoardNode, AppFailure>> upsert(BoardNode node) => studio.upsert(node);
+  Future<Result<BoardNode, AppFailure>> upsert(BoardNode node) =>
+      studio.upsert(node);
 
   @override
-  Future<Result<void, AppFailure>> delete(String nodeId) => studio.deleteNode(nodeId);
+  Future<Result<void, AppFailure>> delete(String nodeId) =>
+      studio.deleteNode(nodeId);
 }
 
 class SupabaseBoardRepository implements BoardRepository {
@@ -56,18 +64,23 @@ class SupabaseBoardRepository implements BoardRepository {
   Future<Result<Board, AppFailure>> getById(String id) => studio.getById(id);
 
   @override
-  Future<Result<Board, AppFailure>> create({required String title}) => studio.create(title: title);
+  Future<Result<Board, AppFailure>> create({required String title}) =>
+      studio.create(title: title);
 
   @override
-  Future<Result<Board, AppFailure>> rename({required String id, required String title}) =>
-      studio.rename(id: id, title: title);
+  Future<Result<Board, AppFailure>> rename({
+    required String id,
+    required String title,
+  }) => studio.rename(id: id, title: title);
 
   @override
   Future<Result<void, AppFailure>> delete(String id) => studio.delete(id);
 
   @override
-  Future<Result<Board, AppFailure>> setRestricted({required String id, required bool restricted}) =>
-      studio.setRestricted(id: id, restricted: restricted);
+  Future<Result<Board, AppFailure>> setRestricted({
+    required String id,
+    required bool restricted,
+  }) => studio.setRestricted(id: id, restricted: restricted);
 }
 
 class SupabaseCanvasRepository implements CanvasRepository {
@@ -75,11 +88,14 @@ class SupabaseCanvasRepository implements CanvasRepository {
   final SupabaseStudio studio;
 
   @override
-  Future<Result<List<BoardNode>, AppFailure>> listNodes(String boardId) => studio.listNodes(boardId);
+  Future<Result<List<BoardNode>, AppFailure>> listNodes(String boardId) =>
+      studio.listNodes(boardId);
 
   @override
-  Future<Result<BoardNode, AppFailure>> upsert(BoardNode node) => studio.upsert(node);
+  Future<Result<BoardNode, AppFailure>> upsert(BoardNode node) =>
+      studio.upsert(node);
 
   @override
-  Future<Result<void, AppFailure>> delete(String nodeId) => studio.deleteNode(nodeId);
+  Future<Result<void, AppFailure>> delete(String nodeId) =>
+      studio.deleteNode(nodeId);
 }

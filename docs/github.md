@@ -11,7 +11,17 @@ Issues:
 - https://github.com/sebbeflebbe/penumbra/issues/2 Canvas echo ritual (Done)
 - https://github.com/sebbeflebbe/penumbra/issues/3 Cloud: wire Supabase (Done)
 - https://github.com/sebbeflebbe/penumbra/issues/4 A11y: themes + EAA copy (Done)
-- https://github.com/sebbeflebbe/penumbra/issues/5 Process: GitHub Project instead of Jira
+- https://github.com/sebbeflebbe/penumbra/issues/5 Process: GitHub Project instead of Jira (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/6 Edit and delete human slips (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/7 Drag-move slips + acknowledge recovery phrase (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/8 Board rename, delete, Art. 18 restrict (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/9 Persist remote-echo consent + erase re-auth (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/10 Cloud WebAuthn passkeys (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/11 Unavailable-path tests + honest copy (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/12 A11y lockstep after new controls (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/13 Env/imprint/ADR/story/OSV hygiene (Done)
+
+Four-week spec: [roadmap.md](roadmap.md). Versioning and GitHub Flow: [versioning.md](versioning.md).
 
 ## Ritual
 
@@ -22,6 +32,7 @@ Issues:
 ## Labels
 
 - `status:in-progress` — this chat (or a PR) is working the slice.
+- `week-1` … `week-4` — four-week enhancement slices.
 
 Opened issues land in **Todo**. Closed issues land in **Done**. `.github/workflows/project.yml` keeps the Project Status field in sync when `PROJECTS_TOKEN` and `PENUMBRA_PROJECT_NUMBER` are set.
 

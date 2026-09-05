@@ -23,13 +23,20 @@ class LandingPage extends ConsumerWidget {
               final wide = constraints.maxWidth >= 860;
               final headline = Text(
                 'A quiet studio for thinking in space.',
-                style: theme.typography.xl4.copyWith(fontWeight: FontWeight.w500, height: 1.08, letterSpacing: -0.8),
+                style: theme.typography.xl4.copyWith(
+                  fontWeight: FontWeight.w500,
+                  height: 1.08,
+                  letterSpacing: -0.8,
+                ),
               ).penumbraEnter(context);
               final lede = ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
                 child: Text(
                   "A spatial notebook for thoughts that aren't ready to leave the room. Notes stay encrypted in the browser; you hold the key. The studio is yours alone.",
-                  style: theme.typography.lg.copyWith(color: theme.colors.mutedForeground, height: 1.55),
+                  style: theme.typography.lg.copyWith(
+                    color: theme.colors.mutedForeground,
+                    height: 1.55,
+                  ),
                 ),
               ).penumbraEnter(context, delayMs: 40);
               final actions = Wrap(
@@ -38,7 +45,9 @@ class LandingPage extends ConsumerWidget {
                 children: [
                   FButton(
                     onPress: () async {
-                      final failure = await ref.read(authControllerProvider.notifier).demo();
+                      final failure = await ref
+                          .read(authControllerProvider.notifier)
+                          .demo();
                       if (!context.mounted) return;
                       if (failure == null) {
                         context.go('/boards');
@@ -71,7 +80,10 @@ class LandingPage extends ConsumerWidget {
                   actions,
                 ],
               );
-              final teaser = const _Teaser().penumbraEnter(context, delayMs: 120);
+              final teaser = const _Teaser().penumbraEnter(
+                context,
+                delayMs: 120,
+              );
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -109,14 +121,29 @@ class _Facts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      (title: 'Private by default', body: 'Board bodies are encrypted in the browser before they touch a server.'),
-      (title: 'Accessible by design', body: 'The canvas has a document order, names, and a high-contrast theme.'),
-      (title: 'Legally operable', body: 'GDPR rights, an SBOM, and an honest “we are not CE-marked” note.'),
+      (
+        title: 'Private by default',
+        body:
+            'Board bodies are encrypted in the browser before they touch a server.',
+      ),
+      (
+        title: 'Accessible by design',
+        body:
+            'The canvas has a document order, names, and a high-contrast theme.',
+      ),
+      (
+        title: 'Legally operable',
+        body:
+            'GDPR rights, an SBOM, and an honest “we are not CE-marked” note.',
+      ),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 800;
-        Widget factAt(int i) => _Fact(title: items[i].title, body: items[i].body).penumbraEnter(context, index: i);
+        Widget factAt(int i) => _Fact(
+          title: items[i].title,
+          body: items[i].body,
+        ).penumbraEnter(context, index: i);
         if (columns) {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,7 +162,10 @@ class _Facts extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (var i = 0; i < items.length; i++)
-              Padding(padding: const EdgeInsets.only(bottom: 28), child: factAt(i)),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 28),
+                child: factAt(i),
+              ),
           ],
         );
       },
@@ -155,9 +185,21 @@ class _Fact extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: theme.typography.lg.copyWith(fontFamily: PenumbraInk.displayFamily, fontWeight: FontWeight.w500)),
+        Text(
+          title,
+          style: theme.typography.lg.copyWith(
+            fontFamily: PenumbraInk.displayFamily,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
-        Text(body, style: theme.typography.sm.copyWith(color: theme.colors.mutedForeground, height: 1.5)),
+        Text(
+          body,
+          style: theme.typography.sm.copyWith(
+            color: theme.colors.mutedForeground,
+            height: 1.5,
+          ),
+        ),
       ],
     );
   }
@@ -182,7 +224,8 @@ class _LivingTeaser extends StatefulWidget {
   State<_LivingTeaser> createState() => _LivingTeaserState();
 }
 
-class _LivingTeaserState extends State<_LivingTeaser> with SingleTickerProviderStateMixin {
+class _LivingTeaserState extends State<_LivingTeaser>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _drift = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 8),
@@ -236,8 +279,16 @@ class _TeaserStage extends StatelessWidget {
             painter: _DotGridPainter(color: theme.colors.border),
             child: Stack(
               children: [
-                _PaperCard(left: 28 + shiftA.dx, top: 36 + shiftA.dy, label: 'Private by default.'),
-                _PaperCard(left: 250 + shiftB.dx, top: 64 + shiftB.dy, label: 'Accessible by design.'),
+                _PaperCard(
+                  left: 28 + shiftA.dx,
+                  top: 36 + shiftA.dy,
+                  label: 'Private by default.',
+                ),
+                _PaperCard(
+                  left: 250 + shiftB.dx,
+                  top: 64 + shiftB.dy,
+                  label: 'Accessible by design.',
+                ),
                 _PaperCard(
                   left: 140 + shiftC.dx,
                   top: 168 + shiftC.dy,
@@ -254,7 +305,12 @@ class _TeaserStage extends StatelessWidget {
 }
 
 class _PaperCard extends StatelessWidget {
-  const _PaperCard({required this.left, required this.top, required this.label, this.swatch});
+  const _PaperCard({
+    required this.left,
+    required this.top,
+    required this.label,
+    this.swatch,
+  });
 
   final double left;
   final double top;
@@ -275,7 +331,11 @@ class _PaperCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: theme.colors.border),
             boxShadow: [
-              BoxShadow(color: theme.colors.foreground.withValues(alpha: 0.06), blurRadius: 18, offset: const Offset(0, 8)),
+              BoxShadow(
+                color: theme.colors.foreground.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
           child: Padding(
@@ -283,7 +343,12 @@ class _PaperCard extends StatelessWidget {
             child: swatch == null
                 ? SizedBox(
                     width: 180,
-                    child: Text(label, style: theme.typography.sm.copyWith(fontFamily: PenumbraInk.displayFamily)),
+                    child: Text(
+                      label,
+                      style: theme.typography.sm.copyWith(
+                        fontFamily: PenumbraInk.displayFamily,
+                      ),
+                    ),
                   )
                 : Container(width: 72, height: 72, color: swatch),
           ),
@@ -310,5 +375,6 @@ class _DotGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DotGridPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _DotGridPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

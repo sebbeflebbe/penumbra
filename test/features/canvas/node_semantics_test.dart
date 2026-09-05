@@ -15,7 +15,14 @@ void main() {
   });
 
   test('empty text cards fall back to Untitled note', () {
-    const node = BoardNode(id: '1', boardId: 'b', x: 0, y: 0, kind: NodeKind.text, text: '  ');
+    const node = BoardNode(
+      id: '1',
+      boardId: 'b',
+      x: 0,
+      y: 0,
+      kind: NodeKind.text,
+      text: '  ',
+    );
     expect(node.semanticsLabel, 'Untitled note');
   });
 
@@ -54,7 +61,11 @@ void main() {
       text: 'Half-light',
       parentId: 'p1',
     );
-    final restored = BoardNode.fromPayload(id: node.id, boardId: node.boardId, payload: node.toPayload());
+    final restored = BoardNode.fromPayload(
+      id: node.id,
+      boardId: node.boardId,
+      payload: node.toPayload(),
+    );
     expect(restored.kind, NodeKind.echo);
     expect(restored.parentId, 'p1');
     expect(restored.text, 'Half-light');

@@ -23,19 +23,27 @@ class MakingOfPage extends StatelessWidget {
             children: [
               Text(
                 'Making of Penumbra',
-                style: theme.typography.xl3.copyWith(fontWeight: FontWeight.w500),
+                style: theme.typography.xl3.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
               ).penumbraEnter(context),
               const SizedBox(height: 12),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 66 * 8),
                 child: Text(
                   'The development story is a product surface. Each chapter names the European control it answers.',
-                  style: theme.typography.sm.copyWith(color: theme.colors.mutedForeground, height: 1.5),
+                  style: theme.typography.sm.copyWith(
+                    color: theme.colors.mutedForeground,
+                    height: 1.5,
+                  ),
                 ),
               ).penumbraEnter(context, delayMs: 40),
               const SizedBox(height: 40),
               for (var i = 0; i < StoryCatalog.chapters.length; i++) ...[
-                _Chapter(chapter: StoryCatalog.chapters[i], index: i).penumbraEnter(context, index: i),
+                _Chapter(
+                  chapter: StoryCatalog.chapters[i],
+                  index: i,
+                ).penumbraEnter(context, index: i),
                 const SizedBox(height: 36),
               ],
             ],
@@ -69,9 +77,20 @@ class _Chapter extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(chapter.title, style: theme.typography.xl2.copyWith(fontFamily: PenumbraInk.displayFamily, fontWeight: FontWeight.w500)),
+          Text(
+            chapter.title,
+            style: theme.typography.xl2.copyWith(
+              fontFamily: PenumbraInk.displayFamily,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(chapter.control, style: theme.typography.xs.copyWith(color: theme.colors.mutedForeground)),
+          Text(
+            chapter.control,
+            style: theme.typography.xs.copyWith(
+              color: theme.colors.mutedForeground,
+            ),
+          ),
           const SizedBox(height: 12),
           Text(chapter.body, style: theme.typography.md.copyWith(height: 1.6)),
         ],

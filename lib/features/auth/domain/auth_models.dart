@@ -29,7 +29,8 @@ class AuthUser {
       email: email ?? this.email,
       displayName: displayName ?? this.displayName,
       methods: methods ?? this.methods,
-      needsRecoveryPhraseReveal: needsRecoveryPhraseReveal ?? this.needsRecoveryPhraseReveal,
+      needsRecoveryPhraseReveal:
+          needsRecoveryPhraseReveal ?? this.needsRecoveryPhraseReveal,
     );
   }
 }
@@ -40,11 +41,15 @@ sealed class AuthFailure {
 }
 
 final class InvalidCredentialsFailure extends AuthFailure {
-  const InvalidCredentialsFailure([super.message = 'Those credentials were not accepted.']);
+  const InvalidCredentialsFailure([
+    super.message = 'Those credentials were not accepted.',
+  ]);
 }
 
 final class RateLimitedFailure extends AuthFailure {
-  const RateLimitedFailure([super.message = 'Too many attempts. Wait a moment.']);
+  const RateLimitedFailure([
+    super.message = 'Too many attempts. Wait a moment.',
+  ]);
 }
 
 final class AuthCancelledFailure extends AuthFailure {
@@ -52,7 +57,9 @@ final class AuthCancelledFailure extends AuthFailure {
 }
 
 final class AuthUnavailableFailure extends AuthFailure {
-  const AuthUnavailableFailure([super.message = 'This sign-in method is not available here.']);
+  const AuthUnavailableFailure([
+    super.message = 'This sign-in method is not available here.',
+  ]);
 }
 
 final class WeakSecretFailure extends AuthFailure {

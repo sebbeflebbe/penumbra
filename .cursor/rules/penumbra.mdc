@@ -1,5 +1,5 @@
 ---
-description: Penumbra agent principles — privacy, Supabase, EAA, themes, GitHub Issues ritual
+description: Penumbra agent principles — privacy, Supabase, EAA, themes, GitHub Issues ritual, versioning
 alwaysApply: true
 ---
 
@@ -11,4 +11,5 @@ alwaysApply: true
 - EAA/EN 301 549 is the accessibility bar. Do not claim full conformance. High-contrast is true B/W.
 - Themes persist. Canvas ritual: Place, nearby echo, Index as conversation.
 - GitHub Issues + Project is the development Kanban: `status:in-progress` before coding, close + comment when landed. Use `gh`, not Atlassian.
+- Never commit on `main`. Branch `{major|minor|patch}/vX.Y.Z-{slug}`, bump `pubspec.yaml` to match, PR into `main`. See `docs/versioning.md`.
 - Honesty over badges. Making-of and ADRs stay true.

@@ -31,7 +31,9 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
     final theme = context.theme;
     final user = ref.watch(authControllerProvider).value;
     final appearance = ref.watch(appearanceProvider);
-    final punctum = appearance == PenumbraAppearance.highContrast ? theme.colors.foreground : PenumbraInk.copper;
+    final punctum = appearance == PenumbraAppearance.highContrast
+        ? theme.colors.foreground
+        : PenumbraInk.copper;
 
     return Stack(
       children: [
@@ -48,7 +50,10 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                 final compact = width < 900;
                 final tiny = width < 640;
                 return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: tiny ? 12 : 24, vertical: tiny ? 12 : 16),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: tiny ? 12 : 24,
+                    vertical: tiny ? 12 : 16,
+                  ),
                   child: Row(
                     children: [
                       _Wordmark(punctum: punctum, compact: tiny),
@@ -58,14 +63,20 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                           child: Text(
                             widget.title!,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.typography.sm.copyWith(color: theme.colors.mutedForeground),
+                            style: theme.typography.sm.copyWith(
+                              color: theme.colors.mutedForeground,
+                            ),
                           ),
                         ),
                       ],
                       const Spacer(),
-                      if (!tiny) const _NavLink(label: 'Making of', path: '/making-of'),
+                      if (!tiny)
+                        const _NavLink(label: 'Making of', path: '/making-of'),
                       if (compact)
-                        _OverflowNav(signedIn: user != null, includeMakingOf: tiny)
+                        _OverflowNav(
+                          signedIn: user != null,
+                          includeMakingOf: tiny,
+                        )
                       else ...[
                         const _NavLink(label: 'Legal', path: '/legal/privacy'),
                         if (user != null) ...[
@@ -78,14 +89,18 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                         tiny
                             ? FButton.icon(
                                 semanticsLabel: 'Sign out',
-                                onPress: () => ref.read(authControllerProvider.notifier).signOut(),
+                                onPress: () => ref
+                                    .read(authControllerProvider.notifier)
+                                    .signOut(),
                                 child: const Icon(FLucideIcons.logOut),
                               )
                             : FButton(
                                 variant: FButtonVariant.ghost,
                                 mainAxisSize: MainAxisSize.min,
                                 semanticsLabel: 'Sign out',
-                                onPress: () => ref.read(authControllerProvider.notifier).signOut(),
+                                onPress: () => ref
+                                    .read(authControllerProvider.notifier)
+                                    .signOut(),
                                 prefix: const Icon(FLucideIcons.logOut),
                                 child: const Text('Sign out'),
                               )
@@ -93,7 +108,9 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                         FButton(
                           variant: FButtonVariant.primary,
                           mainAxisSize: MainAxisSize.min,
-                          size: tiny ? FButtonSizeVariant.sm : FButtonSizeVariant.md,
+                          size: tiny
+                              ? FButtonSizeVariant.sm
+                              : FButtonSizeVariant.md,
                           onPress: () => context.go('/sign-in'),
                           child: const Text('Sign in'),
                         ),
@@ -101,7 +118,9 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                       FButton.icon(
                         semanticsLabel:
                             'Appearance: ${appearance.spokenName}. Switch to ${appearance.next.spokenName}.',
-                        size: tiny ? FButtonSizeVariant.sm : FButtonSizeVariant.md,
+                        size: tiny
+                            ? FButtonSizeVariant.sm
+                            : FButtonSizeVariant.md,
                         onPress: () {
                           final next = appearance.next;
                           ref.read(appearanceProvider.notifier).cycle();
@@ -110,7 +129,8 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                         child: Icon(switch (appearance) {
                           PenumbraAppearance.light => FLucideIcons.sun,
                           PenumbraAppearance.dark => FLucideIcons.moon,
-                          PenumbraAppearance.highContrast => FLucideIcons.contrast,
+                          PenumbraAppearance.highContrast =>
+                            FLucideIcons.contrast,
                           PenumbraAppearance.system => FLucideIcons.sunMoon,
                         }),
                       ),
@@ -172,11 +192,12 @@ class _Wordmark extends StatelessWidget {
           children: [
             Text(
               'Penumbra',
-              style: (compact ? theme.typography.lg : theme.typography.xl).copyWith(
-                fontFamily: PenumbraInk.displayFamily,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.3,
-              ),
+              style: (compact ? theme.typography.lg : theme.typography.xl)
+                  .copyWith(
+                    fontFamily: PenumbraInk.displayFamily,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.3,
+                  ),
             ),
             const SizedBox(width: 8),
             Container(
@@ -203,11 +224,24 @@ class _OverflowNav extends StatelessWidget {
       menu: [
         FItemGroup(
           children: [
-            if (includeMakingOf) FItem(title: const Text('Making of'), onPress: () => context.go('/making-of')),
-            FItem(title: const Text('Legal'), onPress: () => context.go('/legal/privacy')),
+            if (includeMakingOf)
+              FItem(
+                title: const Text('Making of'),
+                onPress: () => context.go('/making-of'),
+              ),
+            FItem(
+              title: const Text('Legal'),
+              onPress: () => context.go('/legal/privacy'),
+            ),
             if (signedIn) ...[
-              FItem(title: const Text('Boards'), onPress: () => context.go('/boards')),
-              FItem(title: const Text('Privacy'), onPress: () => context.go('/privacy')),
+              FItem(
+                title: const Text('Boards'),
+                onPress: () => context.go('/boards'),
+              ),
+              FItem(
+                title: const Text('Privacy'),
+                onPress: () => context.go('/privacy'),
+              ),
             ],
           ],
         ),
@@ -230,7 +264,8 @@ class _NavLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = GoRouterState.of(context).uri.path;
-    final selected = current == path || (path != '/' && current.startsWith(path));
+    final selected =
+        current == path || (path != '/' && current.startsWith(path));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: FButton(
@@ -267,5 +302,9 @@ class PenumbraPage extends StatelessWidget {
 }
 
 Future<void> announce(BuildContext context, String message) async {
-  await SemanticsService.sendAnnouncement(View.of(context), message, TextDirection.ltr);
+  await SemanticsService.sendAnnouncement(
+    View.of(context),
+    message,
+    TextDirection.ltr,
+  );
 }

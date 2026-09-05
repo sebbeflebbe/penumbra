@@ -24,7 +24,12 @@ class BoardsPage extends ConsumerWidget {
           }
           final result = snapshot.data!;
           return result.when(
-            err: (failure) => PenumbraPage(child: FAlert(variant: FAlertVariant.destructive, title: Text(failure.message))),
+            err: (failure) => PenumbraPage(
+              child: FAlert(
+                variant: FAlertVariant.destructive,
+                title: Text(failure.message),
+              ),
+            ),
             ok: (boards) => _BoardsBody(boards: boards),
           );
         },
@@ -52,13 +57,121 @@ class _BoardsBodyState extends ConsumerState<_BoardsBody> {
   }
 
   Future<void> _create() async {
-    final result = await ref.read(boardRepositoryProvider).create(title: _title.text);
+    final result = await ref
+        .read(boardRepositoryProvider)
+        .create(title: _title.text);
     if (!mounted) return;
     result.when(
       ok: (board) {
         setState(() => _boards = [board, ..._boards]);
         _title.clear();
         context.go('/boards/${board.id}');
+      },
+      err: (failure) => announce(context, failure.message),
+    );
+  }
+
+  Future<void> _rename(Board board) async {
+    final controller = TextEditingController(text: board.title);
+    final next = await showFDialog<String>(
+      context: context,
+      builder: (context, style, animation) => FDialog(
+        animation: animation,
+        title: const Text('Rename this board'),
+        body: FTextField(
+          label: const Text('Title'),
+          control: FTextFieldControl.managed(controller: controller),
+        ),
+        actions: [
+          FButton(
+            onPress: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Save title'),
+          ),
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || next == null || next.isEmpty || next == board.title) return;
+    final result = await ref
+        .read(boardRepositoryProvider)
+        .rename(id: board.id, title: next);
+    if (!mounted) return;
+    result.when(
+      ok: (updated) {
+        setState(
+          () => _boards = [
+            for (final item in _boards) item.id == updated.id ? updated : item,
+          ],
+        );
+        announce(context, 'Board renamed.');
+      },
+      err: (failure) => announce(context, failure.message),
+    );
+  }
+
+  Future<void> _toggleRestrict(Board board) async {
+    final result = await ref
+        .read(boardRepositoryProvider)
+        .setRestricted(id: board.id, restricted: !board.restricted);
+    if (!mounted) return;
+    result.when(
+      ok: (updated) {
+        setState(
+          () => _boards = [
+            for (final item in _boards) item.id == updated.id ? updated : item,
+          ],
+        );
+        announce(
+          context,
+          updated.restricted
+              ? 'Board restricted (Art. 18).'
+              : 'Board unrestricted.',
+        );
+      },
+      err: (failure) => announce(context, failure.message),
+    );
+  }
+
+  Future<void> _delete(Board board) async {
+    final confirmed = await showFDialog<bool>(
+      context: context,
+      builder: (context, style, animation) => FDialog(
+        animation: animation,
+        title: const Text('Delete this board'),
+        body: const Text(
+          'The board and its cards will be removed. This cannot be undone.',
+        ),
+        actions: [
+          FButton(
+            variant: FButtonVariant.destructive,
+            onPress: () => Navigator.of(context).pop(true),
+            child: const Text('Delete this board'),
+          ),
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(context).pop(false),
+            child: const Text('Keep it'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    final result = await ref.read(boardRepositoryProvider).delete(board.id);
+    if (!mounted) return;
+    result.when(
+      ok: (_) {
+        setState(
+          () => _boards = [
+            for (final item in _boards)
+              if (item.id != board.id) item,
+          ],
+        );
+        announce(context, 'Board deleted.');
       },
       err: (failure) => announce(context, failure.message),
     );
@@ -73,11 +186,16 @@ class _BoardsBodyState extends ConsumerState<_BoardsBody> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Boards', style: theme.typography.xl3.copyWith(fontWeight: FontWeight.w500)).penumbraEnter(context),
+            Text(
+              'Boards',
+              style: theme.typography.xl3.copyWith(fontWeight: FontWeight.w500),
+            ).penumbraEnter(context),
             const SizedBox(height: 8),
             Text(
               'Each board is yours alone. Titles are metadata; the cards inside are ciphertext.',
-              style: theme.typography.sm.copyWith(color: theme.colors.mutedForeground),
+              style: theme.typography.sm.copyWith(
+                color: theme.colors.mutedForeground,
+              ),
             ).penumbraEnter(context, delayMs: 40),
             const SizedBox(height: 24),
             Row(
@@ -108,13 +226,19 @@ class _BoardsBodyState extends ConsumerState<_BoardsBody> {
                 itemCount: _boards.length,
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 320,
-                  childAspectRatio: 1.28,
+                  childAspectRatio: 0.92,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                 ),
                 itemBuilder: (context, index) {
                   final board = _boards[index];
-                  return _BoardTile(board: board).penumbraEnter(context, index: index);
+                  return _BoardTile(
+                    board: board,
+                    onOpen: () => context.go('/boards/${board.id}'),
+                    onRename: () => _rename(board),
+                    onToggleRestrict: () => _toggleRestrict(board),
+                    onDelete: () => _delete(board),
+                  ).penumbraEnter(context, index: index);
                 },
               ),
           ],
@@ -125,9 +249,19 @@ class _BoardsBodyState extends ConsumerState<_BoardsBody> {
 }
 
 class _BoardTile extends StatefulWidget {
-  const _BoardTile({required this.board});
+  const _BoardTile({
+    required this.board,
+    required this.onOpen,
+    required this.onRename,
+    required this.onToggleRestrict,
+    required this.onDelete,
+  });
 
   final Board board;
+  final VoidCallback onOpen;
+  final VoidCallback onRename;
+  final VoidCallback onToggleRestrict;
+  final VoidCallback onDelete;
 
   @override
   State<_BoardTile> createState() => _BoardTileState();
@@ -147,46 +281,104 @@ class _BoardTileState extends State<_BoardTile> {
       child: Semantics(
         button: true,
         label: board.title,
-        child: GestureDetector(
-          onTap: () => context.go('/boards/${board.id}'),
-          child: AnimatedContainer(
-            duration: motion ? const Duration(milliseconds: 180) : Duration.zero,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.colors.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: theme.colors.border),
-              boxShadow: motion && _hover
-                  ? [
-                      BoxShadow(
-                        color: theme.colors.foreground.withValues(alpha: 0.08),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
+        child: AnimatedContainer(
+          duration: motion ? const Duration(milliseconds: 180) : Duration.zero,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.colors.border),
+            boxShadow: motion && _hover
+                ? [
+                    BoxShadow(
+                      color: theme.colors.foreground.withValues(alpha: 0.08),
+                      blurRadius: 22,
+                      offset: const Offset(0, 10),
+                    ),
+                  ]
+                : const [],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                board.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.typography.lg.copyWith(
+                  fontFamily: PenumbraInk.displayFamily,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                board.restricted ? 'Restricted' : _relative(board.updatedAt),
+                style: theme.typography.xs.copyWith(
+                  color: theme.colors.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  Semantics(
+                    button: true,
+                    label: 'Open ${board.title}',
+                    child: GestureDetector(
+                      onTap: widget.onOpen,
+                      child: Text(
+                        'Open',
+                        style: theme.typography.sm.copyWith(
+                          color: theme.colors.primary,
+                        ),
                       ),
-                    ]
-                  : const [],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  board.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.typography.lg.copyWith(
-                    fontFamily: PenumbraInk.displayFamily,
-                    fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  board.restricted ? 'Restricted' : _relative(board.updatedAt),
-                  style: theme.typography.xs.copyWith(color: theme.colors.mutedForeground),
-                ),
-                const SizedBox(height: 8),
-                Text('Open', style: theme.typography.sm.copyWith(color: theme.colors.primary)),
-              ],
-            ),
+                  Semantics(
+                    button: true,
+                    label: 'Rename ${board.title}',
+                    child: GestureDetector(
+                      onTap: widget.onRename,
+                      child: Text(
+                        'Rename',
+                        style: theme.typography.sm.copyWith(
+                          color: theme.colors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Semantics(
+                    button: true,
+                    label: board.restricted
+                        ? 'Unrestrict ${board.title}'
+                        : 'Restrict ${board.title}',
+                    child: GestureDetector(
+                      onTap: widget.onToggleRestrict,
+                      child: Text(
+                        board.restricted ? 'Unrestrict' : 'Restrict',
+                        style: theme.typography.sm.copyWith(
+                          color: theme.colors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Semantics(
+                    button: true,
+                    label: 'Delete ${board.title}',
+                    child: GestureDetector(
+                      onTap: widget.onDelete,
+                      child: Text(
+                        'Delete',
+                        style: theme.typography.sm.copyWith(
+                          color: theme.colors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -205,7 +397,10 @@ class _EmptyBoards extends StatelessWidget {
       children: [
         Text(
           'Nothing here yet. Name a board, or enter the demo studio from home.',
-          style: theme.typography.md.copyWith(color: theme.colors.mutedForeground, height: 1.45),
+          style: theme.typography.md.copyWith(
+            color: theme.colors.mutedForeground,
+            height: 1.45,
+          ),
         ),
         const SizedBox(height: 28),
         SizedBox(

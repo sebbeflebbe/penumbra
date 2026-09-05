@@ -42,9 +42,15 @@ class LegalPage extends StatelessWidget {
                             child: Text(
                               item.title,
                               style: theme.typography.sm.copyWith(
-                                color: item.slug == doc.slug ? theme.colors.foreground : theme.colors.mutedForeground,
-                                fontWeight: item.slug == doc.slug ? FontWeight.w600 : FontWeight.w400,
-                                decoration: item.slug == doc.slug ? TextDecoration.underline : TextDecoration.none,
+                                color: item.slug == doc.slug
+                                    ? theme.colors.foreground
+                                    : theme.colors.mutedForeground,
+                                fontWeight: item.slug == doc.slug
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                decoration: item.slug == doc.slug
+                                    ? TextDecoration.underline
+                                    : TextDecoration.none,
                                 decorationColor: theme.colors.primary,
                               ),
                             ),
@@ -59,9 +65,17 @@ class LegalPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(doc.title, style: theme.typography.xl3.copyWith(fontWeight: FontWeight.w500)),
+                    Text(
+                      doc.title,
+                      style: theme.typography.xl3.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     const SizedBox(height: 20),
-                    Text(doc.body, style: theme.typography.md.copyWith(height: 1.6)),
+                    Text(
+                      doc.body,
+                      style: theme.typography.md.copyWith(height: 1.6),
+                    ),
                   ],
                 ),
               ).penumbraEnter(context, delayMs: 40);

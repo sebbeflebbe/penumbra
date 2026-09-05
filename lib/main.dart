@@ -29,10 +29,14 @@ Future<void> main() async {
   final config = PenumbraConfig.fromEnvironment();
   final prefs = await SharedPreferences.getInstance();
   final deviceStore = PrefsDeviceStore(prefs);
-  final savedAppearance = appearanceFromName(deviceStore.read(AppearanceController.storageKey));
+  final savedAppearance = appearanceFromName(
+    deviceStore.read(AppearanceController.storageKey),
+  );
   var echoPrompt = kPenumbraEchoSystemPrompt;
   try {
-    echoPrompt = await rootBundle.loadString('assets/prompts/penumbra_echo.txt');
+    echoPrompt = await rootBundle.loadString(
+      'assets/prompts/penumbra_echo.txt',
+    );
   } catch (_) {
     // Asset missing in a stripped test bind — keep the in-code fallback.
   }
@@ -41,15 +45,23 @@ Future<void> main() async {
     configProvider.overrideWithValue(config),
     echoPromptProvider.overrideWithValue(echoPrompt),
     appearanceProvider.overrideWith(
-      (ref) => AppearanceController(store: deviceStore, initial: savedAppearance),
+      (ref) =>
+          AppearanceController(store: deviceStore, initial: savedAppearance),
     ),
   ];
 
   switch (config.studioMode) {
     case StudioMode.memory:
-      overrides.add(studioProvider.overrideWithValue(InMemoryStudio(wordlist: wordlist.words)));
+      overrides.add(
+        studioProvider.overrideWithValue(
+          InMemoryStudio(wordlist: wordlist.words),
+        ),
+      );
     case StudioMode.supabase:
-      await Supabase.initialize(url: config.supabaseUrl, publishableKey: config.supabaseAnonKey);
+      await Supabase.initialize(
+        url: config.supabaseUrl,
+        publishableKey: config.supabaseAnonKey,
+      );
       final remote = SupabaseStudio(
         client: Supabase.instance.client,
         wordlist: wordlist.words,
@@ -58,16 +70,15 @@ Future<void> main() async {
       );
       overrides.addAll([
         authRepositoryProvider.overrideWithValue(remote),
-        boardRepositoryProvider.overrideWithValue(SupabaseBoardRepository(remote)),
-        canvasRepositoryProvider.overrideWithValue(SupabaseCanvasRepository(remote)),
+        boardRepositoryProvider.overrideWithValue(
+          SupabaseBoardRepository(remote),
+        ),
+        canvasRepositoryProvider.overrideWithValue(
+          SupabaseCanvasRepository(remote),
+        ),
         privacyRepositoryProvider.overrideWithValue(remote),
       ]);
   }
 
-  runApp(
-    ProviderScope(
-      overrides: overrides,
-      child: const PenumbraApp(),
-    ),
-  );
+  runApp(ProviderScope(overrides: overrides, child: const PenumbraApp()));
 }

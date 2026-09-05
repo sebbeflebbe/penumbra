@@ -1,3 +1,6 @@
+// GoTrue passkeys are @experimental in 2.27; that is the shipped cloud API.
+// ignore_for_file: experimental_member_use
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -11,7 +14,9 @@ import '../../core/crypto/recovery_phrase.dart';
 import '../../core/errors.dart';
 import '../../core/logging/security_log.dart';
 import '../../core/result.dart';
+import '../auth/data/passkey_ceremony_factory.dart';
 import '../auth/domain/auth_models.dart';
+import '../auth/domain/passkey_ceremony.dart';
 import '../boards/domain/board.dart';
 import '../boards/domain/echo_pairing.dart';
 import '../privacy/domain/privacy_models.dart';
@@ -29,13 +34,15 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     KeyDerivation? derivation,
     Random? random,
     String? redirectTo,
+    PasskeyCeremony? passkeys,
   }) : _client = client,
        _wordlist = wordlist,
        _store = store,
        _cipher = cipher ?? PayloadCipher(),
        _derivation = derivation ?? KeyDerivation(),
        _random = random ?? Random.secure(),
-       _redirectTo = redirectTo {
+       _redirectTo = redirectTo,
+       _passkeys = passkeys ?? createPasskeyCeremony() {
     _authSub = _client.auth.onAuthStateChange.listen((data) {
       if (_holdListener) return;
       unawaited(_onSession(data.session, wrappingSecret: null));
@@ -50,6 +57,7 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   final KeyDerivation _derivation;
   final Random _random;
   final String? _redirectTo;
+  final PasskeyCeremony _passkeys;
 
   final _controller = StreamController<AuthUser?>.broadcast();
   StreamSubscription<AuthState>? _authSub;
@@ -65,7 +73,8 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   AuthUser? get current => _current;
 
   @override
-  String? get pendingRecoveryPhrase => _current == null ? null : _pendingRecoveryPhrase;
+  String? get pendingRecoveryPhrase =>
+      _current == null ? null : _pendingRecoveryPhrase;
 
   @override
   Stream<AuthUser?> watch() async* {
@@ -92,7 +101,10 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     }
     _holdListener = true;
     try {
-      final response = await _client.auth.signInWithPassword(email: normalized, password: password);
+      final response = await _client.auth.signInWithPassword(
+        email: normalized,
+        password: password,
+      );
       final session = response.session;
       if (session == null) {
         return const Err(InvalidCredentialsFailure());
@@ -102,7 +114,11 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
       if (user == null || _sessionDek == null) {
         return const Err(InvalidCredentialsFailure());
       }
-      await _audit(SecurityEventType.signInSuccess, userId: user.id, detail: 'password');
+      await _audit(
+        SecurityEventType.signInSuccess,
+        userId: user.id,
+        detail: 'password',
+      );
       return Ok(user);
     } on AuthException catch (error) {
       return Err(_mapAuth(error));
@@ -133,16 +149,24 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
       final session = response.session;
       if (session == null) {
         return const Err(
-          AuthUnavailableFailure('Confirm your email, then sign in to enter the studio.'),
+          AuthUnavailableFailure(
+            'Confirm your email, then sign in to enter the studio.',
+          ),
         );
       }
       await _onSession(session, wrappingSecret: password, markReauth: true);
       final user = _current;
       if (user == null) {
-        return const Err(AuthUnavailableFailure('Sign-up did not establish a session.'));
+        return const Err(
+          AuthUnavailableFailure('Sign-up did not establish a session.'),
+        );
       }
       await recordConsent(ConsentKind.necessaryStorage, granted: true);
-      await _audit(SecurityEventType.signInSuccess, userId: user.id, detail: 'password-signup');
+      await _audit(
+        SecurityEventType.signInSuccess,
+        userId: user.id,
+        detail: 'password-signup',
+      );
       return Ok(user);
     } on AuthWeakPasswordException catch (error) {
       return Err(WeakSecretFailure(error.message));
@@ -154,13 +178,18 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   }
 
   @override
-  Future<Result<void, AuthFailure>> sendMagicLink({required String email}) async {
+  Future<Result<void, AuthFailure>> sendMagicLink({
+    required String email,
+  }) async {
     final normalized = email.trim().toLowerCase();
     if (!_validEmail(normalized)) {
       return const Err(InvalidCredentialsFailure('Enter a valid email.'));
     }
     try {
-      await _client.auth.signInWithOtp(email: normalized, emailRedirectTo: _redirectTo);
+      await _client.auth.signInWithOtp(
+        email: normalized,
+        emailRedirectTo: _redirectTo,
+      );
       return const Ok(null);
     } on AuthException catch (error) {
       return Err(_mapAuth(error));
@@ -168,25 +197,79 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   }
 
   @override
-  Future<Result<AuthUser, AuthFailure>> signInWithGoogle() => _federated(OAuthProvider.google);
+  Future<Result<AuthUser, AuthFailure>> signInWithGoogle() =>
+      _federated(OAuthProvider.google);
 
   @override
-  Future<Result<AuthUser, AuthFailure>> signInWithGitHub() => _federated(OAuthProvider.github);
+  Future<Result<AuthUser, AuthFailure>> signInWithGitHub() =>
+      _federated(OAuthProvider.github);
 
   @override
   Future<Result<AuthUser, AuthFailure>> signInWithPasskey() async {
-    return const Err(
-      AuthUnavailableFailure(
-        'Passkeys are not available on this Supabase project yet. Use Google, GitHub, a magic link, or a password.',
-      ),
-    );
+    if (!_passkeys.isSupported) {
+      return Err(passkeyUnavailable(supported: false));
+    }
+    _holdListener = true;
+    try {
+      final challenge = await _client.auth.passkey.startAuthentication();
+      final credential = await _passkeys.get(challenge.options);
+      final response = await _client.auth.passkey.verifyAuthentication(
+        challengeId: challenge.challengeId,
+        credential: credential,
+      );
+      final session = response.session;
+      if (session == null) {
+        return Err(passkeyUnavailable(supported: true));
+      }
+      await _onSession(session, wrappingSecret: null, markReauth: true);
+      final user = _current;
+      if (user == null || _sessionDek == null) {
+        return const Err(
+          AuthUnavailableFailure(
+            'Passkey sign-in did not unlock the studio key.',
+          ),
+        );
+      }
+      await _audit(
+        SecurityEventType.signInSuccess,
+        userId: user.id,
+        detail: 'passkey',
+      );
+      return Ok(user);
+    } on PasskeyCancelled {
+      return const Err(AuthCancelledFailure());
+    } on UnsupportedError {
+      return Err(passkeyUnavailable(supported: false));
+    } on AuthException catch (error) {
+      return Err(_mapAuth(error));
+    } finally {
+      _holdListener = false;
+    }
   }
 
   @override
   Future<Result<void, AuthFailure>> registerPasskey() async {
-    return const Err(
-      AuthUnavailableFailure('Passkey registration is not available on this Supabase project yet.'),
-    );
+    if (!_passkeys.isSupported) {
+      return Err(passkeyUnavailable(supported: false));
+    }
+    if (_current == null) {
+      return const Err(AuthUnavailableFailure('Sign in first.'));
+    }
+    try {
+      final challenge = await _client.auth.passkey.startRegistration();
+      final credential = await _passkeys.create(challenge.options);
+      await _client.auth.passkey.verifyRegistration(
+        challengeId: challenge.challengeId,
+        credential: credential,
+      );
+      return const Ok(null);
+    } on PasskeyCancelled {
+      return const Err(AuthCancelledFailure());
+    } on UnsupportedError {
+      return Err(passkeyUnavailable(supported: false));
+    } on AuthException catch (error) {
+      return Err(_mapAuth(error));
+    }
   }
 
   @override
@@ -225,8 +308,11 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
       return const Err(InvalidCredentialsFailure());
     } else {
       final last = _lastReauthAt;
-      if (last == null || clock.now().toUtc().difference(last) > const Duration(minutes: 5)) {
-        return const Err(AuthUnavailableFailure('Sign in again to erase this account.'));
+      if (last == null ||
+          clock.now().toUtc().difference(last) > const Duration(minutes: 5)) {
+        return const Err(
+          AuthUnavailableFailure('Sign in again to erase this account.'),
+        );
       }
       return const Ok(null);
     }
@@ -239,8 +325,11 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     final user = _current;
     if (user == null) return const Err(AuthUnavailableFailure());
     final reauth = _lastReauthAt;
-    if (reauth == null || clock.now().toUtc().difference(reauth) > const Duration(minutes: 5)) {
-      return const Err(AuthUnavailableFailure('Re-authenticate to erase this account.'));
+    if (reauth == null ||
+        clock.now().toUtc().difference(reauth) > const Duration(minutes: 5)) {
+      return const Err(
+        AuthUnavailableFailure('Re-authenticate to erase this account.'),
+      );
     }
     await _audit(SecurityEventType.accountErasureRequested, userId: user.id);
     try {
@@ -265,8 +354,14 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     final user = _current;
     if (user == null) return const Err(UnauthenticatedFailure());
     try {
-      final rows = await _client.from('boards').select().eq('owner_id', user.id).order('updated_at', ascending: false);
-      return Ok([for (final row in rows as List) _boardFrom(row as Map<String, dynamic>)]);
+      final rows = await _client
+          .from('boards')
+          .select()
+          .eq('owner_id', user.id)
+          .order('updated_at', ascending: false);
+      return Ok([
+        for (final row in rows as List) _boardFrom(row as Map<String, dynamic>),
+      ]);
     } on Object catch (error) {
       return Err(_mapPostgrest(error));
     }
@@ -276,11 +371,17 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     final user = _current;
     if (user == null) return const Err(UnauthenticatedFailure());
     try {
-      final row = await _client.from('boards').select().eq('id', id).maybeSingle();
+      final row = await _client
+          .from('boards')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
       if (row == null) return const Err(NotFoundFailure('Board not found.'));
       final board = _boardFrom(row);
       if (board.ownerId != user.id) {
-        return const Err(ForbiddenFailure('That board belongs to someone else.'));
+        return const Err(
+          ForbiddenFailure('That board belongs to someone else.'),
+        );
       }
       return Ok(board);
     } on Object catch (error) {
@@ -292,30 +393,42 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     final user = _current;
     if (user == null) return const Err(UnauthenticatedFailure());
     final trimmed = title.trim();
-    if (trimmed.isEmpty) return const Err(ValidationFailure('Give the board a name.'));
+    if (trimmed.isEmpty)
+      return const Err(ValidationFailure('Give the board a name.'));
     try {
-      final row = await _client.from('boards').insert({
-        'owner_id': user.id,
-        'title': trimmed,
-      }).select().single();
+      final row = await _client
+          .from('boards')
+          .insert({'owner_id': user.id, 'title': trimmed})
+          .select()
+          .single();
       return Ok(_boardFrom(row));
     } on Object catch (error) {
       return Err(_mapPostgrest(error));
     }
   }
 
-  Future<Result<Board, AppFailure>> rename({required String id, required String title}) async {
+  Future<Result<Board, AppFailure>> rename({
+    required String id,
+    required String title,
+  }) async {
     final existing = await getById(id);
     return existing.when(
       ok: (board) async {
         if (board.restricted) {
-          return const Err(ForbiddenFailure('This board is restricted (Art. 18).'));
+          return const Err(
+            ForbiddenFailure('This board is restricted (Art. 18).'),
+          );
         }
         try {
-          final row = await _client.from('boards').update({
-            'title': title.trim(),
-            'updated_at': clock.now().toUtc().toIso8601String(),
-          }).eq('id', id).select().single();
+          final row = await _client
+              .from('boards')
+              .update({
+                'title': title.trim(),
+                'updated_at': clock.now().toUtc().toIso8601String(),
+              })
+              .eq('id', id)
+              .select()
+              .single();
           return Ok(_boardFrom(row));
         } on Object catch (error) {
           return Err(_mapPostgrest(error));
@@ -340,15 +453,23 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     );
   }
 
-  Future<Result<Board, AppFailure>> setRestricted({required String id, required bool restricted}) async {
+  Future<Result<Board, AppFailure>> setRestricted({
+    required String id,
+    required bool restricted,
+  }) async {
     final existing = await getById(id);
     return existing.when(
       ok: (board) async {
         try {
-          final row = await _client.from('boards').update({
-            'restricted': restricted,
-            'updated_at': clock.now().toUtc().toIso8601String(),
-          }).eq('id', id).select().single();
+          final row = await _client
+              .from('boards')
+              .update({
+                'restricted': restricted,
+                'updated_at': clock.now().toUtc().toIso8601String(),
+              })
+              .eq('id', id)
+              .select()
+              .single();
           await _audit(
             SecurityEventType.boardRestricted,
             userId: board.ownerId,
@@ -371,16 +492,24 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
         return Err(failure);
       case Ok():
         try {
-          final rows = await _client.from('board_nodes').select().eq('board_id', boardId);
+          final rows = await _client
+              .from('board_nodes')
+              .select()
+              .eq('board_id', boardId);
           final out = <BoardNode>[];
           for (final row in rows as List) {
             final map = row as Map<String, dynamic>;
-            final stored = Ciphertext.fromStorage(map['ciphertext'] as String? ?? '');
+            final stored = Ciphertext.fromStorage(
+              map['ciphertext'] as String? ?? '',
+            );
             switch (stored) {
               case Err():
                 continue;
               case Ok(:final value):
-                switch (await _cipher.decrypt(dekBytes: dek, ciphertext: value)) {
+                switch (await _cipher.decrypt(
+                  dekBytes: dek,
+                  ciphertext: value,
+                )) {
                   case Err():
                     continue;
                   case Ok(:final value):
@@ -390,7 +519,9 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
                       BoardNode.fromPayload(
                         id: map['id'] as String,
                         boardId: boardId,
-                        payload: decoded.map((k, v) => MapEntry(k.toString(), v)),
+                        payload: decoded.map(
+                          (k, v) => MapEntry(k.toString(), v),
+                        ),
                       ),
                     );
                 }
@@ -413,9 +544,15 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
       case Ok(:final value):
         final board = value;
         if (board.restricted) {
-          return const Err(ForbiddenFailure('This board is restricted (Art. 18).'));
+          return const Err(
+            ForbiddenFailure('This board is restricted (Art. 18).'),
+          );
         }
-        final siblings = await _decryptedSiblings(boardId: node.boardId, dek: dek, exceptId: node.id);
+        final siblings = await _decryptedSiblings(
+          boardId: node.boardId,
+          dek: dek,
+          exceptId: node.id,
+        );
         switch (EchoPairing.validateWrite(node, siblings)) {
           case Err(:final failure):
             return Err(failure);
@@ -434,9 +571,10 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
                 'owner_id': user.id,
                 'ciphertext': value.toStorage(),
               });
-              await _client.from('boards').update({
-                'updated_at': clock.now().toUtc().toIso8601String(),
-              }).eq('id', board.id);
+              await _client
+                  .from('boards')
+                  .update({'updated_at': clock.now().toUtc().toIso8601String()})
+                  .eq('id', board.id);
               return Ok(node);
             } on Object catch (error) {
               return Err(_mapPostgrest(error));
@@ -450,25 +588,42 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     final user = _current;
     if (dek == null || user == null) return const Err(UnauthenticatedFailure());
     try {
-      final row = await _client.from('board_nodes').select().eq('id', nodeId).maybeSingle();
+      final row = await _client
+          .from('board_nodes')
+          .select()
+          .eq('id', nodeId)
+          .maybeSingle();
       if (row == null) return const Err(NotFoundFailure('Card not found.'));
       final boardId = row['board_id'] as String;
       switch (await getById(boardId)) {
         case Err(:final failure):
           return Err(failure);
-        case Ok():
+        case Ok(:final value):
+          if (value.restricted) {
+            return const Err(
+              ForbiddenFailure('This board is restricted (Art. 18).'),
+            );
+          }
           final cascade = <String>{nodeId};
-          final siblings = await _client.from('board_nodes').select().eq('board_id', boardId);
+          final siblings = await _client
+              .from('board_nodes')
+              .select()
+              .eq('board_id', boardId);
           for (final other in siblings as List) {
             final map = other as Map<String, dynamic>;
             final id = map['id'] as String;
             if (id == nodeId) continue;
-            final stored = Ciphertext.fromStorage(map['ciphertext'] as String? ?? '');
+            final stored = Ciphertext.fromStorage(
+              map['ciphertext'] as String? ?? '',
+            );
             switch (stored) {
               case Err():
                 continue;
               case Ok(:final value):
-                switch (await _cipher.decrypt(dekBytes: dek, ciphertext: value)) {
+                switch (await _cipher.decrypt(
+                  dekBytes: dek,
+                  ciphertext: value,
+                )) {
                   case Err():
                     continue;
                   case Ok(:final value):
@@ -494,7 +649,11 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     final user = _current;
     if (user == null) return const Err(UnauthenticatedFailure());
     try {
-      final rows = await _client.from('consent_events').select().eq('user_id', user.id).order('at');
+      final rows = await _client
+          .from('consent_events')
+          .select()
+          .eq('user_id', user.id)
+          .order('at');
       return Ok([
         for (final row in rows as List)
           ConsentEvent(
@@ -511,15 +670,18 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   }
 
   @override
-  Future<Result<ConsentEvent, AppFailure>> recordConsent(ConsentKind kind, {required bool granted}) async {
+  Future<Result<ConsentEvent, AppFailure>> recordConsent(
+    ConsentKind kind, {
+    required bool granted,
+  }) async {
     final user = _current;
     if (user == null) return const Err(UnauthenticatedFailure());
     try {
-      final row = await _client.from('consent_events').insert({
-        'user_id': user.id,
-        'kind': kind.name,
-        'granted': granted,
-      }).select().single();
+      final row = await _client
+          .from('consent_events')
+          .insert({'user_id': user.id, 'kind': kind.name, 'granted': granted})
+          .select()
+          .single();
       return Ok(
         ConsentEvent(
           id: row['id'] as String,
@@ -562,7 +724,8 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
             err: (_) {},
           );
         }
-        final consentRows = (await consents()).okOrNull ?? const <ConsentEvent>[];
+        final consentRows =
+            (await consents()).okOrNull ?? const <ConsentEvent>[];
         return Ok(
           PrivacyExport(
             generatedAt: clock.now().toUtc(),
@@ -604,22 +767,34 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     return reauth.when(
       ok: (_) async {
         final deleted = await deleteAccount();
-        return deleted.when(ok: (_) => const Ok(null), err: (f) => Err(UnavailableFailure(f.message)));
+        return deleted.when(
+          ok: (_) => const Ok(null),
+          err: (f) => Err(UnavailableFailure(f.message)),
+        );
       },
       err: (f) async => Err(UnauthenticatedFailure(f.message)),
     );
   }
 
-  Future<Result<AuthUser, AuthFailure>> _federated(OAuthProvider provider) async {
+  Future<Result<AuthUser, AuthFailure>> _federated(
+    OAuthProvider provider,
+  ) async {
     try {
-      final launched = await _client.auth.signInWithOAuth(provider, redirectTo: _redirectTo);
+      final launched = await _client.auth.signInWithOAuth(
+        provider,
+        redirectTo: _redirectTo,
+      );
       if (!launched) return const Err(AuthCancelledFailure());
       final user = _current;
       if (user != null) return Ok(user);
       return Ok(
         AuthUser(
           id: 'oauth-redirect',
-          methods: {provider == OAuthProvider.google ? AuthMethod.google : AuthMethod.github},
+          methods: {
+            provider == OAuthProvider.google
+                ? AuthMethod.google
+                : AuthMethod.github,
+          },
         ),
       );
     } on AuthException catch (error) {
@@ -627,30 +802,48 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     }
   }
 
-  Future<void> _onSession(Session? session, {String? wrappingSecret, bool markReauth = false}) {
+  Future<void> _onSession(
+    Session? session, {
+    String? wrappingSecret,
+    bool markReauth = false,
+  }) {
     final previous = _hydrateGate;
     final next = () async {
       await previous;
-      await _hydrate(session, wrappingSecret: wrappingSecret, markReauth: markReauth);
+      await _hydrate(
+        session,
+        wrappingSecret: wrappingSecret,
+        markReauth: markReauth,
+      );
     }();
     _hydrateGate = next;
     return next;
   }
 
-  Future<void> _hydrate(Session? session, {String? wrappingSecret, bool markReauth = false}) async {
+  Future<void> _hydrate(
+    Session? session, {
+    String? wrappingSecret,
+    bool markReauth = false,
+  }) async {
     if (session == null) {
       _clearLocal();
       return;
     }
     final remote = session.user;
-    if (_sessionDek != null && _current?.id == remote.id && wrappingSecret == null) {
+    if (_sessionDek != null &&
+        _current?.id == remote.id &&
+        wrappingSecret == null) {
       if (markReauth) _lastReauthAt = clock.now().toUtc();
       return;
     }
 
     Map<String, dynamic>? profile;
     try {
-      profile = await _client.from('profiles').select().eq('id', remote.id).maybeSingle();
+      profile = await _client
+          .from('profiles')
+          .select()
+          .eq('id', remote.id)
+          .maybeSingle();
     } on Object {
       profile = null;
     }
@@ -662,21 +855,35 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     var firstWrap = false;
 
     if (wrappingSecret != null && saltRaw != null && wrappedRaw != null) {
-      dek = await _unwrapDek(secret: wrappingSecret, saltRaw: saltRaw, wrappedRaw: wrappedRaw);
+      dek = await _unwrapDek(
+        secret: wrappingSecret,
+        saltRaw: saltRaw,
+        wrappedRaw: wrappedRaw,
+      );
     }
 
     dek ??= await _unlockDevice(remote.id);
 
-    if (dek == null && wrappingSecret != null && (saltRaw == null || wrappedRaw == null)) {
+    if (dek == null &&
+        wrappingSecret != null &&
+        (saltRaw == null || wrappedRaw == null)) {
       dek = _newDek();
-      firstWrap = await _persistWrap(userId: remote.id, dek: dek, secret: wrappingSecret);
+      firstWrap = await _persistWrap(
+        userId: remote.id,
+        dek: dek,
+        secret: wrappingSecret,
+      );
       if (!firstWrap) dek = null;
     }
 
     if (dek == null && (saltRaw == null || wrappedRaw == null)) {
       final phrase = _newPhrase();
       dek = _newDek();
-      firstWrap = await _persistWrap(userId: remote.id, dek: dek, secret: phrase);
+      firstWrap = await _persistWrap(
+        userId: remote.id,
+        dek: dek,
+        secret: phrase,
+      );
       if (firstWrap) {
         _pendingRecoveryPhrase = phrase;
         reveal = true;
@@ -713,12 +920,18 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   }) async {
     final salt = _decodeB64(saltRaw);
     if (salt == null) return null;
-    final wrapping = await _derivation.deriveWrappingKey(secret: secret, salt: salt);
+    final wrapping = await _derivation.deriveWrappingKey(
+      secret: secret,
+      salt: salt,
+    );
     final wrapKey = wrapping.okOrNull;
     if (wrapKey == null) return null;
     final stored = Ciphertext.fromStorage(wrappedRaw).okOrNull;
     if (stored == null) return null;
-    return (await _cipher.decrypt(dekBytes: wrapKey, ciphertext: stored)).okOrNull;
+    return (await _cipher.decrypt(
+      dekBytes: wrapKey,
+      ciphertext: stored,
+    )).okOrNull;
   }
 
   Future<bool> _persistWrap({
@@ -726,11 +939,19 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     required Uint8List dek,
     required String secret,
   }) async {
-    final salt = Uint8List.fromList(List<int>.generate(16, (_) => _random.nextInt(256)));
-    final wrapping = await _derivation.deriveWrappingKey(secret: secret, salt: salt);
+    final salt = Uint8List.fromList(
+      List<int>.generate(16, (_) => _random.nextInt(256)),
+    );
+    final wrapping = await _derivation.deriveWrappingKey(
+      secret: secret,
+      salt: salt,
+    );
     final wrapKey = wrapping.okOrNull;
     if (wrapKey == null) return false;
-    final wrapped = (await _cipher.encrypt(dekBytes: wrapKey, plaintext: dek)).okOrNull;
+    final wrapped = (await _cipher.encrypt(
+      dekBytes: wrapKey,
+      plaintext: dek,
+    )).okOrNull;
     if (wrapped == null) return false;
     try {
       await _client.from('profiles').upsert({
@@ -757,9 +978,15 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
 
   Future<void> _rememberDevice(String userId, Uint8List dek) async {
     final key = _newDek();
-    final wrapped = (await _cipher.encrypt(dekBytes: key, plaintext: dek)).okOrNull;
+    final wrapped = (await _cipher.encrypt(
+      dekBytes: key,
+      plaintext: dek,
+    )).okOrNull;
     if (wrapped == null) return;
-    await _store.write(_deviceKey(userId), base64Url.encode(key).replaceAll('=', ''));
+    await _store.write(
+      _deviceKey(userId),
+      base64Url.encode(key).replaceAll('=', ''),
+    );
     await _store.write(_deviceWrapped(userId), wrapped.toStorage());
   }
 
@@ -775,7 +1002,11 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     ];
   }
 
-  Future<void> _audit(SecurityEventType type, {String? userId, String? detail}) async {
+  Future<void> _audit(
+    SecurityEventType type, {
+    String? userId,
+    String? detail,
+  }) async {
     if (userId == null) return;
     try {
       await _client.from('security_events').insert({
@@ -792,7 +1023,9 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     return AuthUser(
       id: user.id,
       email: user.email,
-      displayName: user.userMetadata?['full_name'] as String? ?? user.userMetadata?['name'] as String?,
+      displayName:
+          user.userMetadata?['full_name'] as String? ??
+          user.userMetadata?['name'] as String?,
       methods: _methods(user),
       needsRecoveryPhraseReveal: reveal && _pendingRecoveryPhrase != null,
     );
@@ -847,11 +1080,17 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     _controller.add(null);
   }
 
-  Uint8List _newDek() => Uint8List.fromList(List<int>.generate(32, (_) => _random.nextInt(256)));
+  Uint8List _newDek() =>
+      Uint8List.fromList(List<int>.generate(32, (_) => _random.nextInt(256)));
 
   String _newPhrase() {
-    final entropy = Uint8List.fromList(List<int>.generate(16, (_) => _random.nextInt(256)));
-    return RecoveryPhrase.fromEntropy(entropy: entropy, wordlist: _wordlist).when(
+    final entropy = Uint8List.fromList(
+      List<int>.generate(16, (_) => _random.nextInt(256)),
+    );
+    return RecoveryPhrase.fromEntropy(
+      entropy: entropy,
+      wordlist: _wordlist,
+    ).when(
       ok: (phrase) => phrase.display,
       err: (_) => base64Url.encode(entropy),
     );
@@ -868,7 +1107,18 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
 
   AuthFailure _mapAuth(AuthException error) {
     if (error.statusCode == '429') return const RateLimitedFailure();
-    if (error is AuthWeakPasswordException) return WeakSecretFailure(error.message);
+    if (error is AuthWeakPasswordException)
+      return WeakSecretFailure(error.message);
+    final code = error.code;
+    if (code == 'passkey_disabled' || code == 'webauthn_credential_not_found') {
+      return const AuthUnavailableFailure(kPasskeyProjectDisabledMessage);
+    }
+    if (code == 'webauthn_challenge_expired' ||
+        code == 'webauthn_verification_failed') {
+      return const AuthCancelledFailure(
+        'That passkey could not be verified. Try again.',
+      );
+    }
     return InvalidCredentialsFailure(error.message);
   }
 
@@ -885,7 +1135,8 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     return const UnavailableFailure('The studio could not reach the cloud.');
   }
 
-  bool _validEmail(String email) => RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
+  bool _validEmail(String email) =>
+      RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
 
   String _deviceKey(String userId) => 'penumbra.device_key.$userId';
   String _deviceWrapped(String userId) => 'penumbra.device_wrapped.$userId';

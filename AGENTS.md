@@ -15,13 +15,22 @@ Read this first. Product is small; craft is the interview artifact.
 
 ## GitHub Issues + Project (development board)
 
-GitHub is the process board, not a product feature. See `docs/github.md`. Repo: https://github.com/sebbeflebbe/penumbra Board: https://github.com/users/sebbeflebbe/projects/2
+GitHub is the process board, not a product feature. See `docs/github.md`. Four-week enhancement spec: `docs/roadmap.md`. Repo: https://github.com/sebbeflebbe/penumbra Board: https://github.com/users/sebbeflebbe/projects/2
 
 1. Before coding a slice: create or pick the issue; add `status:in-progress` (Project: **In Progress**).
 2. When the slice lands: comment with what changed; close the issue (Project: **Done**). PRs use `Fixes #N`.
 3. Do not let the board rot.
 
 Use `gh issue` / `gh project`, not Atlassian.
+
+## Versioning and PRs
+
+Never commit on `main`. See `docs/versioning.md`.
+
+1. Create `{major|minor|patch}/vX.Y.Z-{slug}` from up-to-date `main`.
+2. Bump `pubspec.yaml` to match (`MAJOR.MINOR.PATCH+BUILD`).
+3. Commit, `git push -u origin HEAD`, open a PR to `main`. PR title starts with `vX.Y.Z:`.
+4. Merge only when CI jobs **analyze**, **test**, **build-web**, and **supply-chain** are green.
 
 ## Stack
 

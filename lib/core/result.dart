@@ -2,7 +2,10 @@
 sealed class Result<S, F> {
   const Result();
 
-  T when<T>({required T Function(S value) ok, required T Function(F failure) err}) {
+  T when<T>({
+    required T Function(S value) ok,
+    required T Function(F failure) err,
+  }) {
     return switch (this) {
       Ok(:final value) => ok(value),
       Err(:final failure) => err(failure),

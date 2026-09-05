@@ -49,7 +49,8 @@ final class Ciphertext {
 
 /// Encrypts board node payloads. The DEK never leaves the client.
 class PayloadCipher {
-  PayloadCipher({AesGcm? algorithm}) : _algorithm = algorithm ?? AesGcm.with256bits();
+  PayloadCipher({AesGcm? algorithm})
+    : _algorithm = algorithm ?? AesGcm.with256bits();
 
   final AesGcm _algorithm;
 
@@ -93,7 +94,10 @@ class PayloadCipher {
         nonce: ciphertext.nonce,
         mac: Mac(ciphertext.mac),
       );
-      final clear = await _algorithm.decrypt(box, secretKey: SecretKey(dekBytes));
+      final clear = await _algorithm.decrypt(
+        box,
+        secretKey: SecretKey(dekBytes),
+      );
       return Ok(Uint8List.fromList(clear));
     } on SecretBoxAuthenticationError {
       return const Err(CryptoFailure('Authentication tag mismatch.'));
