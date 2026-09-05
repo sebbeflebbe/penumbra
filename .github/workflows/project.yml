@@ -21,7 +21,7 @@ jobs:
           PROJECTS_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROJECT_NUMBER: ${{ vars.PENUMBRA_PROJECT_NUMBER }}
-          OWNER: sebbeflebbe
+          OWNER: ${{ github.repository_owner }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTION: ${{ github.event.action }}
           ISSUE_NODE: ${{ github.event.issue.node_id }}
@@ -50,13 +50,24 @@ jobs:
                   }
                 }
               }
+              organization(login: $owner) {
+                projectV2(number: $number) {
+                  id
+                  field(name: "Status") {
+                    ... on ProjectV2SingleSelectField {
+                      id
+                      options { id name }
+                    }
+                  }
+                }
+              }
             }' -F owner="$OWNER" -F number="$PROJECT_NUMBER")
 
-          project_id=$(echo "$meta" | jq -r '.data.user.projectV2.id')
-          field_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.id')
-          todo_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.options[]? | select(.name=="To do" or .name=="Todo") | .id' | head -n1)
-          progress_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.options[]? | select(.name=="In Progress") | .id' | head -n1)
-          done_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.options[]? | select(.name=="Done") | .id' | head -n1)
+          project_id=$(echo "$meta" | jq -r '.data.user.projectV2.id // .data.organization.projectV2.id')
+          field_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.id // .data.organization.projectV2.field.id')
+          todo_id=$(echo "$meta" | jq -r '(.data.user.projectV2.field.options // .data.organization.projectV2.field.options // [])[] | select(.name=="To do" or .name=="Todo") | .id' | head -n1)
+          progress_id=$(echo "$meta" | jq -r '(.data.user.projectV2.field.options // .data.organization.projectV2.field.options // [])[] | select(.name=="In Progress") | .id' | head -n1)
+          done_id=$(echo "$meta" | jq -r '(.data.user.projectV2.field.options // .data.organization.projectV2.field.options // [])[] | select(.name=="Done") | .id' | head -n1)
 
           if [ -z "$project_id" ] || [ "$project_id" = "null" ]; then
             echo "Could not load project $OWNER/$PROJECT_NUMBER"
