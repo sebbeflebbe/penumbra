@@ -2,7 +2,16 @@
 
 GitHub Issues and a GitHub Project are the process board for this interview project. They are not a feature inside the studio.
 
-Repo: https://github.com/sebbeflebbe/penumbra
+- Repo: https://github.com/sebbeflebbe/penumbra
+- Board: https://github.com/users/sebbeflebbe/projects/2
+
+Issues:
+
+- https://github.com/sebbeflebbe/penumbra/issues/1 Guiding documents (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/2 Canvas echo ritual (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/3 Cloud: wire Supabase (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/4 A11y: themes + EAA copy (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/5 Process: GitHub Project instead of Jira
 
 ## Ritual
 
@@ -14,7 +23,7 @@ Repo: https://github.com/sebbeflebbe/penumbra
 
 - `status:in-progress` — this chat (or a PR) is working the slice.
 
-Opened issues land in **To do**. Closed issues land in **Done**. `.github/workflows/project.yml` keeps the Project Status field in sync when `PROJECTS_TOKEN` and `PENUMBRA_PROJECT_NUMBER` are set.
+Opened issues land in **Todo**. Closed issues land in **Done**. `.github/workflows/project.yml` keeps the Project Status field in sync when `PROJECTS_TOKEN` and `PENUMBRA_PROJECT_NUMBER` are set.
 
 ## This chat
 
