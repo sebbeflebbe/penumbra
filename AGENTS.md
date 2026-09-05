@@ -15,7 +15,7 @@ Read this first. Product is small; craft is the interview artifact.
 
 ## GitHub Issues + Project (development board)
 
-GitHub is the process board, not a product feature. See `docs/github.md`. Four-week enhancement spec: `docs/roadmap.md`. Repo: https://github.com/sebbeflebbe/penumbra Board: https://github.com/users/sebbeflebbe/projects/2
+GitHub is the process board, not a product feature. See `docs/github.md`. Weeks 5–8 enhancement spec: `docs/roadmap.md` (issues #15–#22). Repo: https://github.com/sebbeflebbe/penumbra Board: https://github.com/users/sebbeflebbe/projects/2
 
 1. Before coding a slice: create or pick the issue; add `status:in-progress` (Project: **In Progress**).
 2. When the slice lands: comment with what changed; close the issue (Project: **Done**). PRs use `Fixes #N`.

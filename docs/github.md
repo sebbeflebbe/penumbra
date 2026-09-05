@@ -20,8 +20,16 @@ Issues:
 - https://github.com/sebbeflebbe/penumbra/issues/11 Unavailable-path tests + honest copy (Done)
 - https://github.com/sebbeflebbe/penumbra/issues/12 A11y lockstep after new controls (Done)
 - https://github.com/sebbeflebbe/penumbra/issues/13 Env/imprint/ADR/story/OSV hygiene (Done)
+- https://github.com/sebbeflebbe/penumbra/issues/15 Phrase unlock when the device wrap is gone
+- https://github.com/sebbeflebbe/penumbra/issues/16 Withdraw remote-echo consent (Art. 7(3))
+- https://github.com/sebbeflebbe/penumbra/issues/17 Register a passkey from an existing session
+- https://github.com/sebbeflebbe/penumbra/issues/18 Art. 16 display name + Art. 20 downloadable export
+- https://github.com/sebbeflebbe/penumbra/issues/19 Split canvas_page.dart with no behaviour change
+- https://github.com/sebbeflebbe/penumbra/issues/20 Index / Move a11y deepening
+- https://github.com/sebbeflebbe/penumbra/issues/21 Test holes for already-shipped UI
+- https://github.com/sebbeflebbe/penumbra/issues/22 Story / ADR / origin runbook / 1.2.0 honesty
 
-Four-week spec: [roadmap.md](roadmap.md). Versioning and GitHub Flow: [versioning.md](versioning.md).
+Four-week spec (Weeks 5–8): [roadmap.md](roadmap.md). Versioning and GitHub Flow: [versioning.md](versioning.md).
 
 ## Ritual
 
@@ -32,7 +40,8 @@ Four-week spec: [roadmap.md](roadmap.md). Versioning and GitHub Flow: [versionin
 ## Labels
 
 - `status:in-progress` — this chat (or a PR) is working the slice.
-- `week-1` … `week-4` — four-week enhancement slices.
+- `week-1` … `week-4` — first deepening (shipped).
+- `week-5` … `week-8` — current enhancement slices.
 
 Opened issues land in **Todo**. Closed issues land in **Done**. `.github/workflows/project.yml` keeps the Project Status field in sync when `PROJECTS_TOKEN` and `PENUMBRA_PROJECT_NUMBER` are set.
 
