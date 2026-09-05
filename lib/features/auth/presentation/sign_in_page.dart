@@ -33,7 +33,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
   bool get _busy => _busyId != null;
 
-  Future<void> _run(String id, Future<AuthFailure?> Function() action, {String? success}) async {
+  Future<void> _run(
+    String id,
+    Future<AuthFailure?> Function() action, {
+    String? success,
+  }) async {
     setState(() {
       _busyId = id;
       _error = null;
@@ -76,7 +80,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: theme.colors.border),
               boxShadow: [
-                BoxShadow(color: theme.colors.foreground.withValues(alpha: 0.05), blurRadius: 28, offset: const Offset(0, 12)),
+                BoxShadow(
+                  color: theme.colors.foreground.withValues(alpha: 0.05),
+                  blurRadius: 28,
+                  offset: const Offset(0, 12),
+                ),
               ],
             ),
             child: Padding(
@@ -87,16 +95,24 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   children: [
                     Text(
                       'Enter the half-light.',
-                      style: theme.typography.xl3.copyWith(fontWeight: FontWeight.w500),
+                      style: theme.typography.xl3.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
                     ).penumbraEnter(context),
                     const SizedBox(height: 8),
                     Text(
                       'Passkeys are preferred. Passwords are the weakest path and must be at least 12 characters.',
-                      style: theme.typography.sm.copyWith(color: theme.colors.mutedForeground, height: 1.45),
+                      style: theme.typography.sm.copyWith(
+                        color: theme.colors.mutedForeground,
+                        height: 1.45,
+                      ),
                     ).penumbraEnter(context, delayMs: 40),
                     const SizedBox(height: 28),
                     if (_error != null) ...[
-                      FAlert(variant: FAlertVariant.destructive, title: Text(_error!)).penumbraEnter(context),
+                      FAlert(
+                        variant: FAlertVariant.destructive,
+                        title: Text(_error!),
+                      ).penumbraEnter(context),
                       const SizedBox(height: 16),
                     ],
                     if (_info != null) ...[
@@ -104,21 +120,45 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       const SizedBox(height: 16),
                     ],
                     FButton(
-                      onPress: _busy ? null : () => _run('passkey', () => ref.read(authControllerProvider.notifier).passkey()),
-                      prefix: _prefix('passkey', const Icon(FLucideIcons.fingerprint)),
+                      onPress: _busy
+                          ? null
+                          : () => _run(
+                              'passkey',
+                              () => ref
+                                  .read(authControllerProvider.notifier)
+                                  .passkey(),
+                            ),
+                      prefix: _prefix(
+                        'passkey',
+                        const Icon(FLucideIcons.fingerprint),
+                      ),
                       child: const Text('Continue with a passkey'),
                     ).penumbraEnter(context, delayMs: 80),
                     const SizedBox(height: 10),
                     FButton(
                       variant: FButtonVariant.outline,
-                      onPress: _busy ? null : () => _run('google', () => ref.read(authControllerProvider.notifier).google()),
+                      onPress: _busy
+                          ? null
+                          : () => _run(
+                              'google',
+                              () => ref
+                                  .read(authControllerProvider.notifier)
+                                  .google(),
+                            ),
                       prefix: _prefix('google', const Icon(FLucideIcons.globe)),
                       child: const Text('Continue with Google'),
                     ).penumbraEnter(context, delayMs: 110),
                     const SizedBox(height: 10),
                     FButton(
                       variant: FButtonVariant.outline,
-                      onPress: _busy ? null : () => _run('github', () => ref.read(authControllerProvider.notifier).github()),
+                      onPress: _busy
+                          ? null
+                          : () => _run(
+                              'github',
+                              () => ref
+                                  .read(authControllerProvider.notifier)
+                                  .github(),
+                            ),
                       prefix: _prefix('github', const Icon(FLucideIcons.code)),
                       child: const Text('Continue with GitHub'),
                     ).penumbraEnter(context, delayMs: 140),
@@ -128,7 +168,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         const Expanded(child: FDivider()),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('or', style: theme.typography.xs.copyWith(color: theme.colors.mutedForeground)),
+                          child: Text(
+                            'or',
+                            style: theme.typography.xs.copyWith(
+                              color: theme.colors.mutedForeground,
+                            ),
+                          ),
                         ),
                         const Expanded(child: FDivider()),
                       ],
@@ -136,7 +181,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     const SizedBox(height: 24),
                     FTextField.email(
                       control: FTextFieldControl.managed(controller: _email),
-                      description: const Text('Used only to restore your studio.'),
+                      description: const Text(
+                        'Used only to restore your studio.',
+                      ),
                     ).penumbraEnter(context, delayMs: 180),
                     const SizedBox(height: 12),
                     FButton(
@@ -145,20 +192,25 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                           ? null
                           : () async {
                               setState(() => _busyId = 'magic');
-                              final failure = await ref.read(authControllerProvider.notifier).magicLink(_email.text);
+                              final failure = await ref
+                                  .read(authControllerProvider.notifier)
+                                  .magicLink(_email.text);
                               if (!mounted) return;
-                              final signedIn = ref.read(authControllerProvider).value != null;
+                              final signedIn =
+                                  ref.read(authControllerProvider).value !=
+                                  null;
                               setState(() {
                                 _busyId = null;
                                 _error = failure?.message;
                                 _info = failure == null
                                     ? (signedIn
-                                        ? 'Magic link sent (in this demo the session is opened immediately).'
-                                        : 'Check your email for a link. Keep this tab open.')
+                                          ? 'Magic link sent (in this demo the session is opened immediately).'
+                                          : 'Check your email for a link. Keep this tab open.')
                                     : null;
                               });
                               if (!context.mounted) return;
-                              if (failure == null && signedIn) context.go('/boards');
+                              if (failure == null && signedIn)
+                                context.go('/boards');
                             },
                       prefix: _prefix('magic', const Icon(FLucideIcons.mail)),
                       child: const Text('Email me a magic link'),
@@ -166,15 +218,22 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     const SizedBox(height: 8),
                     FButton(
                       variant: FButtonVariant.ghost,
-                      onPress: () => setState(() => _passwordOpen = !_passwordOpen),
-                      child: Text(_passwordOpen ? 'Hide password' : 'Use a password instead'),
+                      onPress: () =>
+                          setState(() => _passwordOpen = !_passwordOpen),
+                      child: Text(
+                        _passwordOpen
+                            ? 'Hide password'
+                            : 'Use a password instead',
+                      ),
                     ).penumbraEnter(context, delayMs: 220),
                     if (_passwordOpen) ...[
                       const SizedBox(height: 12),
                       FTextField(
                         label: const Text('Password'),
                         obscureText: true,
-                        control: FTextFieldControl.managed(controller: _password),
+                        control: FTextFieldControl.managed(
+                          controller: _password,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       FButton(
@@ -183,7 +242,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             ? null
                             : () => _run(
                                 'password',
-                                () => ref.read(authControllerProvider.notifier).signInPassword(_email.text, _password.text),
+                                () => ref
+                                    .read(authControllerProvider.notifier)
+                                    .signInPassword(
+                                      _email.text,
+                                      _password.text,
+                                    ),
                               ),
                         prefix: _prefix('password', const SizedBox.shrink()),
                         child: const Text('Sign in with password'),
@@ -195,7 +259,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             ? null
                             : () => _run(
                                 'signup',
-                                () => ref.read(authControllerProvider.notifier).signUpPassword(_email.text, _password.text),
+                                () => ref
+                                    .read(authControllerProvider.notifier)
+                                    .signUpPassword(
+                                      _email.text,
+                                      _password.text,
+                                    ),
                               ),
                         child: const Text('Create an account'),
                       ),

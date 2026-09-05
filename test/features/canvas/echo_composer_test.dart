@@ -7,29 +7,48 @@ import 'package:penumbra/core/errors.dart';
 import 'package:penumbra/features/canvas/domain/echo_composer.dart';
 
 void main() {
-  test('local echo is non-empty, not a copy, and at most sixty words', () async {
-    const source = 'Private by default.';
-    final result = await const LocalEchoComposer().echo(source: source);
-    final text = result.okOrNull!;
-    expect(text, isNotEmpty);
-    expect(text, isNot(source));
-    expect(text.toLowerCase(), isNot(contains(source.toLowerCase().replaceAll('.', ''))));
-    expect(text.split(RegExp(r'\s+')).length, lessThanOrEqualTo(60));
-    expect(LocalEchoComposer.rephrase(source), text);
-    expect(text, isNot(contains('The same weather:')));
-  });
+  test(
+    'local echo is non-empty, not a copy, and at most sixty words',
+    () async {
+      const source = 'Private by default.';
+      final result = await const LocalEchoComposer().echo(source: source);
+      final text = result.okOrNull!;
+      expect(text, isNotEmpty);
+      expect(text, isNot(source));
+      expect(
+        text.toLowerCase(),
+        isNot(contains(source.toLowerCase().replaceAll('.', ''))),
+      );
+      expect(text.split(RegExp(r'\s+')).length, lessThanOrEqualTo(60));
+      expect(LocalEchoComposer.rephrase(source), text);
+      expect(text, isNot(contains('The same weather:')));
+    },
+  );
 
-  test('local echo offers a philosophical companion instead of concatenating the source', () async {
-    final sad = LocalEchoComposer.rephrase('I am sad');
-    expect(sad.toLowerCase(), isNot(contains('i am sad')));
-    expect(sad, anyOf(contains('Sorrow'), contains('hurts'), contains('Grief')));
+  test(
+    'local echo offers a philosophical companion instead of concatenating the source',
+    () async {
+      final sad = LocalEchoComposer.rephrase('I am sad');
+      expect(sad.toLowerCase(), isNot(contains('i am sad')));
+      expect(
+        sad,
+        anyOf(contains('Sorrow'), contains('hurts'), contains('Grief')),
+      );
 
-    final problem = LocalEchoComposer.rephrase('this is a problem');
-    expect(problem.toLowerCase(), isNot(contains('this is a problem')));
-    expect(problem, anyOf(contains('difficulty'), contains('problem is often'), contains('trouble')));
+      final problem = LocalEchoComposer.rephrase('this is a problem');
+      expect(problem.toLowerCase(), isNot(contains('this is a problem')));
+      expect(
+        problem,
+        anyOf(
+          contains('difficulty'),
+          contains('problem is often'),
+          contains('trouble'),
+        ),
+      );
 
-    expect(sad, isNot(problem));
-  });
+      expect(sad, isNot(problem));
+    },
+  );
 
   test('local echo refuses an empty slip', () async {
     final result = await const LocalEchoComposer().echo(source: '   ');
@@ -78,16 +97,25 @@ void main() {
 
   test('gemini 4xx fails closed', () async {
     final client = MockClient((request) async => http.Response('nope', 403));
-    final composer = GeminiEchoComposer(apiKey: 'k', systemPrompt: 'x', client: client);
+    final composer = GeminiEchoComposer(
+      apiKey: 'k',
+      systemPrompt: 'x',
+      client: client,
+    );
     final result = await composer.echo(source: 'A thought.');
     expect(result.errOrNull, isA<UnavailableFailure>());
   });
 
   test('empty model fails closed', () async {
     final client = MockClient(
-      (request) async => http.Response(json.encode({'candidates': <Object>[]}), 200),
+      (request) async =>
+          http.Response(json.encode({'candidates': <Object>[]}), 200),
     );
-    final composer = GeminiEchoComposer(apiKey: 'k', systemPrompt: 'x', client: client);
+    final composer = GeminiEchoComposer(
+      apiKey: 'k',
+      systemPrompt: 'x',
+      client: client,
+    );
     final result = await composer.echo(source: 'A thought.');
     expect(result.errOrNull, isA<UnavailableFailure>());
   });

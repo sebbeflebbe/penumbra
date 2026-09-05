@@ -35,6 +35,15 @@ jobs:
             echo "PROJECTS_TOKEN is not set; skipping Projects v2 sync."
             exit 0
           fi
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            numbers=$(echo "${PR_BODY:-}" | grep -Eo '(Fixes|Closes|Resolves)[[:space:]]+#[0-9]+' | grep -Eo '[0-9]+' || true)
+            if [ -z "${numbers}" ]; then
+              echo "PR has no Fixes/Closes/Resolves keywords; skipping Projects sync."
+              exit 0
+            fi
+          fi
+
           export GH_TOKEN="${PROJECTS_TOKEN}"
 
           meta=$(gh api graphql -f query='
@@ -61,7 +70,10 @@ jobs:
                   }
                 }
               }
-            }' -F owner="$OWNER" -F number="$PROJECT_NUMBER")
+            }' -F owner="$OWNER" -F number="$PROJECT_NUMBER") || {
+            echo "GraphQL lookup failed; skipping Projects v2 sync."
+            exit 0
+          }
 
           project_id=$(echo "$meta" | jq -r '.data.user.projectV2.id // .data.organization.projectV2.id')
           field_id=$(echo "$meta" | jq -r '.data.user.projectV2.field.id // .data.organization.projectV2.field.id')

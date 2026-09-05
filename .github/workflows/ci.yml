@@ -5,11 +5,15 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 env:
   FLUTTER_VERSION: "3.44.1"
 
 jobs:
-  test:
+  analyze:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,21 +24,61 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: dart analyze --fatal-warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
       - run: flutter test --coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          if-no-files-found: ignore
+
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build web --release
+      - run: mkdir -p build/web/.well-known && cp web/.well-known/security.txt build/web/.well-known/security.txt && cp web/_headers build/web/_headers
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
       - run: dart run tool/generate_sbom.dart build/sbom.cdx.json
       - uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: build/sbom.cdx.json
       - name: OSV scan
-        uses: google/osv-scanner-action@v2
+        uses: google/osv-scanner-action/osv-scanner-action@v2.5.1
         with:
           scan-args: |-
             --lockfile=pubspec.lock
         continue-on-error: false
 
   deploy:
-    needs: test
+    needs: [analyze, test, build-web, supply-chain]
     if: github.ref == 'refs/heads/main' && vars.CLOUDFLARE_PROJECT_NAME != ''
     runs-on: ubuntu-latest
     steps:

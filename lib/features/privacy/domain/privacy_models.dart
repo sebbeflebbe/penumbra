@@ -1,6 +1,6 @@
 import 'package:clock/clock.dart';
 
-enum ConsentKind { necessaryStorage, termsOfUse }
+enum ConsentKind { necessaryStorage, termsOfUse, remoteEcho }
 
 class ConsentEvent {
   const ConsentEvent({
@@ -79,13 +79,16 @@ List<DataCategory> penumbraDataCategories() => const [
     name: 'Consent and security events',
     purpose: 'Demonstrate consent and detect abuse',
     lawfulBasis: 'Legal obligation / contract',
-    retention: '90 days for security logs; consents for the life of the account',
+    retention:
+        '90 days for security logs; consents for the life of the account',
   ),
   DataCategory(
     name: 'Optional echo (Gemini)',
-    purpose: 'A short companion to one summoned slip, never the rest of the board',
+    purpose:
+        'A short companion to one summoned slip, never the rest of the board',
     lawfulBasis: 'Consent (GDPR Art. 6(1)(a)); local fallback if no key',
-    retention: 'Not stored at Google by us; the echo slip is encrypted like any other card',
+    retention:
+        'Not stored at Google by us; the echo slip is encrypted like any other card',
   ),
 ];
 
@@ -97,4 +100,8 @@ ConsentEvent grantNecessary({required String id, required String userId}) {
     granted: true,
     at: clock.now().toUtc(),
   );
+}
+
+bool hasGrantedConsent(List<ConsentEvent> events, ConsentKind kind) {
+  return events.any((event) => event.kind == kind && event.granted);
 }

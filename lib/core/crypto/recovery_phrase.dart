@@ -39,7 +39,9 @@ class RecoveryPhrase {
     if (wordlist.length != 2048) {
       return const Err(CryptoFailure('Wordlist must contain 2048 words.'));
     }
-    final lookup = <String, int>{for (var i = 0; i < wordlist.length; i++) wordlist[i]: i};
+    final lookup = <String, int>{
+      for (var i = 0; i < wordlist.length; i++) wordlist[i]: i,
+    };
     final indices = <int>[];
     for (final word in words) {
       final index = lookup[word];
@@ -49,7 +51,10 @@ class RecoveryPhrase {
       indices.add(index);
     }
     final entropy = _indicesToEntropy(indices);
-    final checksumOk = switch (fromEntropy(entropy: entropy, wordlist: wordlist)) {
+    final checksumOk = switch (fromEntropy(
+      entropy: entropy,
+      wordlist: wordlist,
+    )) {
       Ok(:final value) => value.display == words.join(' '),
       Err() => false,
     };
@@ -62,7 +67,9 @@ class RecoveryPhrase {
   Result<Uint8List, CryptoFailure> toEntropy(List<String> wordlist) {
     return parse(phrase: display, wordlist: wordlist).when(
       ok: (phrase) {
-        final lookup = <String, int>{for (var i = 0; i < wordlist.length; i++) wordlist[i]: i};
+        final lookup = <String, int>{
+          for (var i = 0; i < wordlist.length; i++) wordlist[i]: i,
+        };
         final indices = [for (final word in phrase.words) lookup[word]!];
         return Ok(_indicesToEntropy(indices));
       },

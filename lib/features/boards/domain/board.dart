@@ -15,11 +15,7 @@ class Board {
   final DateTime updatedAt;
   final bool restricted;
 
-  Board copyWith({
-    String? title,
-    DateTime? updatedAt,
-    bool? restricted,
-  }) {
+  Board copyWith({String? title, DateTime? updatedAt, bool? restricted}) {
     return Board(
       id: id,
       ownerId: ownerId,
@@ -68,12 +64,18 @@ class BoardNode {
 
   String get semanticsLabel {
     final body = switch (kind) {
-      NodeKind.text => text?.trim().isNotEmpty == true ? text!.trim() : 'Untitled note',
+      NodeKind.text =>
+        text?.trim().isNotEmpty == true ? text!.trim() : 'Untitled note',
       NodeKind.swatch => 'Colour swatch',
-      NodeKind.echo => text?.trim().isNotEmpty == true ? 'Echo of ${text!.trim()}' : 'Echo of an unnamed thought',
+      NodeKind.echo =>
+        text?.trim().isNotEmpty == true
+            ? 'Echo of ${text!.trim()}'
+            : 'Echo of an unnamed thought',
     };
     return body;
   }
+
+  BoardNode movedBy(double dx, double dy) => copyWith(x: x + dx, y: y + dy);
 
   BoardNode copyWith({
     double? x,

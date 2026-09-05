@@ -15,7 +15,9 @@ class Bip39Wordlist {
         .where((w) => w.isNotEmpty)
         .toList(growable: false);
     if (words.length != 2048) {
-      throw StateError('BIP39 wordlist must contain 2048 words, found ${words.length}.');
+      throw StateError(
+        'BIP39 wordlist must contain 2048 words, found ${words.length}.',
+      );
     }
     return Bip39Wordlist(words);
   }

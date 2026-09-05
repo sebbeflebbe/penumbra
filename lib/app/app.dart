@@ -13,17 +13,23 @@ class PenumbraApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final appearance = ref.watch(appearanceProvider);
-    final platform = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final platform =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
     final pair = PenumbraThemes.pair(appearance, platform);
     final light = pair.$1;
-    final dark = appearance == PenumbraAppearance.dark || (appearance == PenumbraAppearance.system && platform == Brightness.dark)
+    final dark =
+        appearance == PenumbraAppearance.dark ||
+            (appearance == PenumbraAppearance.system &&
+                platform == Brightness.dark)
         ? pair.$2
         : pair.$1;
     final active = switch (appearance) {
       PenumbraAppearance.dark => dark,
-      PenumbraAppearance.highContrast when platform == Brightness.dark => PenumbraThemes.highContrastDark(),
+      PenumbraAppearance.highContrast when platform == Brightness.dark =>
+        PenumbraThemes.highContrastDark(),
       PenumbraAppearance.highContrast => PenumbraThemes.highContrastLight(),
-      PenumbraAppearance.system when platform == Brightness.dark => PenumbraThemes.dark(),
+      PenumbraAppearance.system when platform == Brightness.dark =>
+        PenumbraThemes.dark(),
       _ => light,
     };
 
@@ -43,10 +49,7 @@ class PenumbraApp extends ConsumerWidget {
       routerConfig: router,
       builder: (context, child) {
         return FToaster(
-          child: FTheme(
-            data: active,
-            child: child ?? const SizedBox.shrink(),
-          ),
+          child: FTheme(data: active, child: child ?? const SizedBox.shrink()),
         );
       },
     );

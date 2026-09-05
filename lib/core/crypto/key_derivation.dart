@@ -36,7 +36,10 @@ class KeyDerivation {
       return const Err(CryptoFailure('Salt is too short.'));
     }
     try {
-      final key = await _kdf.deriveKeyFromPassword(password: secret, nonce: salt);
+      final key = await _kdf.deriveKeyFromPassword(
+        password: secret,
+        nonce: salt,
+      );
       final bytes = await key.extractBytes();
       return Ok(Uint8List.fromList(bytes));
     } on Object {

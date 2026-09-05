@@ -31,15 +31,27 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/',
-        pageBuilder: (context, state) => penumbraRoutePage(key: state.pageKey, child: const LandingPage(), context: context),
+        pageBuilder: (context, state) => penumbraRoutePage(
+          key: state.pageKey,
+          child: const LandingPage(),
+          context: context,
+        ),
       ),
       GoRoute(
         path: '/sign-in',
-        pageBuilder: (context, state) => penumbraRoutePage(key: state.pageKey, child: const SignInPage(), context: context),
+        pageBuilder: (context, state) => penumbraRoutePage(
+          key: state.pageKey,
+          child: const SignInPage(),
+          context: context,
+        ),
       ),
       GoRoute(
         path: '/boards',
-        pageBuilder: (context, state) => penumbraRoutePage(key: state.pageKey, child: const BoardsPage(), context: context),
+        pageBuilder: (context, state) => penumbraRoutePage(
+          key: state.pageKey,
+          child: const BoardsPage(),
+          context: context,
+        ),
       ),
       GoRoute(
         path: '/boards/:id',
@@ -51,12 +63,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/privacy',
-        pageBuilder: (context, state) => penumbraRoutePage(key: state.pageKey, child: const PrivacyPage(), context: context),
+        pageBuilder: (context, state) => penumbraRoutePage(
+          key: state.pageKey,
+          child: const PrivacyPage(),
+          context: context,
+        ),
       ),
       GoRoute(
         path: '/making-of',
-        pageBuilder: (context, state) =>
-            penumbraRoutePage(key: state.pageKey, child: const MakingOfPage(), context: context),
+        pageBuilder: (context, state) => penumbraRoutePage(
+          key: state.pageKey,
+          child: const MakingOfPage(),
+          context: context,
+        ),
       ),
       GoRoute(
         path: '/legal/:slug',

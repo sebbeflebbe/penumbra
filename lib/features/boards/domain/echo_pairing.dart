@@ -20,7 +20,10 @@ abstract final class EchoPairing {
     return echo.copyWith(x: parent.x + offsetX, y: parent.y + offsetY);
   }
 
-  static Result<void, AppFailure> validateWrite(BoardNode node, List<BoardNode> siblings) {
+  static Result<void, AppFailure> validateWrite(
+    BoardNode node,
+    List<BoardNode> siblings,
+  ) {
     if (node.kind != NodeKind.echo) {
       if (node.parentId != null) {
         return const Err(ValidationFailure('Only an echo names a parent.'));
@@ -45,8 +48,14 @@ abstract final class EchoPairing {
       return const Err(ValidationFailure('Echoes answer human slips only.'));
     }
     for (final sibling in siblings) {
-      if (sibling.id != node.id && sibling.kind == NodeKind.echo && sibling.parentId == parentId) {
-        return const Err(ValidationFailure('This slip already has an echo. Dismiss it to summon again.'));
+      if (sibling.id != node.id &&
+          sibling.kind == NodeKind.echo &&
+          sibling.parentId == parentId) {
+        return const Err(
+          ValidationFailure(
+            'This slip already has an echo. Dismiss it to summon again.',
+          ),
+        );
       }
     }
     return const Ok(null);
@@ -91,7 +100,10 @@ abstract final class EchoPairing {
   }
 
   static String numeral(List<BoardNode> conversation, BoardNode node) {
-    final humans = [for (final item in conversation) if (item.kind != NodeKind.echo) item];
+    final humans = [
+      for (final item in conversation)
+        if (item.kind != NodeKind.echo) item,
+    ];
     if (node.kind == NodeKind.echo) {
       final parentIndex = humans.indexWhere((item) => item.id == node.parentId);
       final n = parentIndex < 0 ? humans.length + 1 : parentIndex + 1;

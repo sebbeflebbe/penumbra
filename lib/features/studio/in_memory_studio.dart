@@ -99,7 +99,8 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
 
   List<String> get wordlist => _wordlist;
 
-  String? debugCipherStorage(String nodeId) => _nodes[nodeId]?.ciphertext.toStorage();
+  String? debugCipherStorage(String nodeId) =>
+      _nodes[nodeId]?.ciphertext.toStorage();
 
   @override
   String? get pendingRecoveryPhrase {
@@ -129,7 +130,10 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
   }) async {
     final normalized = email.trim().toLowerCase();
     if (!_validEmail(normalized) || password.length < 12) {
-      securityLog.record(type: SecurityEventType.signInFailure, detail: 'password');
+      securityLog.record(
+        type: SecurityEventType.signInFailure,
+        detail: 'password',
+      );
       return const Err(InvalidCredentialsFailure());
     }
     if (_isRateLimited()) {
@@ -140,7 +144,10 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     final account = id == null ? null : _accounts[id];
     if (account == null || account.passwordHash != _hash(password)) {
       _passwordFailures[normalized] = (_passwordFailures[normalized] ?? 0) + 1;
-      securityLog.record(type: SecurityEventType.signInFailure, detail: 'password');
+      securityLog.record(
+        type: SecurityEventType.signInFailure,
+        detail: 'password',
+      );
       return const Err(InvalidCredentialsFailure());
     }
     if ((_passwordFailures[normalized] ?? 0) >= 8) {
@@ -151,7 +158,11 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     account.lastReauthAt = clock.now().toUtc();
     final user = _toUser(account);
     _setCurrent(user);
-    securityLog.record(type: SecurityEventType.signInSuccess, userId: user.id, detail: 'password');
+    securityLog.record(
+      type: SecurityEventType.signInSuccess,
+      userId: user.id,
+      detail: 'password',
+    );
     return Ok(user);
   }
 
@@ -168,7 +179,9 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
       return const Err(WeakSecretFailure());
     }
     if (_emailIndex.containsKey(normalized)) {
-      return const Err(InvalidCredentialsFailure('An account already exists for that email.'));
+      return const Err(
+        InvalidCredentialsFailure('An account already exists for that email.'),
+      );
     }
     final account = await _createAccount(
       email: normalized,
@@ -181,12 +194,18 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     final user = _toUser(account);
     _setCurrent(user);
     await recordConsent(ConsentKind.necessaryStorage, granted: true);
-    securityLog.record(type: SecurityEventType.signInSuccess, userId: user.id, detail: 'password-signup');
+    securityLog.record(
+      type: SecurityEventType.signInSuccess,
+      userId: user.id,
+      detail: 'password-signup',
+    );
     return Ok(user);
   }
 
   @override
-  Future<Result<void, AuthFailure>> sendMagicLink({required String email}) async {
+  Future<Result<void, AuthFailure>> sendMagicLink({
+    required String email,
+  }) async {
     final normalized = email.trim().toLowerCase();
     if (!_validEmail(normalized)) {
       return const Err(InvalidCredentialsFailure('Enter a valid email.'));
@@ -201,26 +220,37 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
         : _accounts[existingId]!;
     account.methods.add(AuthMethod.magicLink);
     _sessionDek = account.dek;
-    final user = _toUser(account, reveal: account.pendingRecoveryPhrase != null);
+    final user = _toUser(
+      account,
+      reveal: account.pendingRecoveryPhrase != null,
+    );
     _setCurrent(user);
     await recordConsent(ConsentKind.necessaryStorage, granted: true);
-    securityLog.record(type: SecurityEventType.signInSuccess, userId: user.id, detail: 'magic-link');
+    securityLog.record(
+      type: SecurityEventType.signInSuccess,
+      userId: user.id,
+      detail: 'magic-link',
+    );
     return const Ok(null);
   }
 
   @override
-  Future<Result<AuthUser, AuthFailure>> signInWithGoogle() => _federated(AuthMethod.google, 'google-ada@penumbra.studio');
+  Future<Result<AuthUser, AuthFailure>> signInWithGoogle() =>
+      _federated(AuthMethod.google, 'google-ada@penumbra.studio');
 
   @override
-  Future<Result<AuthUser, AuthFailure>> signInWithGitHub() => _federated(AuthMethod.github, 'github-ada@penumbra.studio');
+  Future<Result<AuthUser, AuthFailure>> signInWithGitHub() =>
+      _federated(AuthMethod.github, 'github-ada@penumbra.studio');
 
   @override
-  Future<Result<AuthUser, AuthFailure>> signInWithPasskey() => _federated(AuthMethod.passkey, 'passkey-ada@penumbra.studio');
+  Future<Result<AuthUser, AuthFailure>> signInWithPasskey() =>
+      _federated(AuthMethod.passkey, 'passkey-ada@penumbra.studio');
 
   @override
   Future<Result<void, AuthFailure>> registerPasskey() async {
     final user = _current;
-    if (user == null) return const Err(AuthUnavailableFailure('Sign in first.'));
+    if (user == null)
+      return const Err(AuthUnavailableFailure('Sign in first.'));
     _accounts[user.id]?.methods.add(AuthMethod.passkey);
     _setCurrent(_toUser(_accounts[user.id]!));
     return const Ok(null);
@@ -249,7 +279,9 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     _setCurrent(user);
     await recordConsent(ConsentKind.necessaryStorage, granted: true);
     await create(title: 'Quiet thoughts');
-    final boards = (_current == null) ? <Board>[] : _boards.values.where((b) => b.ownerId == _current!.id).toList();
+    final boards = (_current == null)
+        ? <Board>[]
+        : _boards.values.where((b) => b.ownerId == _current!.id).toList();
     if (boards.isNotEmpty) {
       final boardId = boards.first.id;
       await upsert(
@@ -283,7 +315,11 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
         ),
       );
     }
-    securityLog.record(type: SecurityEventType.signInSuccess, userId: user.id, detail: 'demo');
+    securityLog.record(
+      type: SecurityEventType.signInSuccess,
+      userId: user.id,
+      detail: 'demo',
+    );
     return Ok(user);
   }
 
@@ -317,10 +353,16 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     if (user == null) return const Err(AuthUnavailableFailure());
     final account = _accounts[user.id]!;
     final reauth = account.lastReauthAt;
-    if (reauth == null || clock.now().toUtc().difference(reauth) > const Duration(minutes: 5)) {
-      return const Err(AuthUnavailableFailure('Re-authenticate to erase this account.'));
+    if (reauth == null ||
+        clock.now().toUtc().difference(reauth) > const Duration(minutes: 5)) {
+      return const Err(
+        AuthUnavailableFailure('Re-authenticate to erase this account.'),
+      );
     }
-    securityLog.record(type: SecurityEventType.accountErasureRequested, userId: user.id);
+    securityLog.record(
+      type: SecurityEventType.accountErasureRequested,
+      userId: user.id,
+    );
     _boards.removeWhere((_, board) => board.ownerId == user.id);
     _nodes.removeWhere((_, node) => node.ownerId == user.id);
     _consents.remove(user.id);
@@ -329,7 +371,10 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     _current = null;
     _sessionDek = null;
     _controller.add(null);
-    securityLog.record(type: SecurityEventType.accountErasureCompleted, userId: user.id);
+    securityLog.record(
+      type: SecurityEventType.accountErasureCompleted,
+      userId: user.id,
+    );
     return const Ok(null);
   }
 
@@ -346,7 +391,8 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     if (user == null) return const Err(UnauthenticatedFailure());
     final board = _boards[id];
     if (board == null) return const Err(NotFoundFailure('Board not found.'));
-    if (board.ownerId != user.id) return const Err(ForbiddenFailure('That board belongs to someone else.'));
+    if (board.ownerId != user.id)
+      return const Err(ForbiddenFailure('That board belongs to someone else.'));
     return Ok(board);
   }
 
@@ -354,20 +400,33 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     final user = _requireUser();
     if (user == null) return const Err(UnauthenticatedFailure());
     final trimmed = title.trim();
-    if (trimmed.isEmpty) return const Err(ValidationFailure('Give the board a name.'));
-    final board = Board.create(id: _uuid.v4(), ownerId: user.id, title: trimmed);
+    if (trimmed.isEmpty)
+      return const Err(ValidationFailure('Give the board a name.'));
+    final board = Board.create(
+      id: _uuid.v4(),
+      ownerId: user.id,
+      title: trimmed,
+    );
     _boards[board.id] = board;
     return Ok(board);
   }
 
-  Future<Result<Board, AppFailure>> rename({required String id, required String title}) async {
+  Future<Result<Board, AppFailure>> rename({
+    required String id,
+    required String title,
+  }) async {
     final result = await getById(id);
     return result.when(
       ok: (board) {
         if (board.restricted) {
-          return const Err(ForbiddenFailure('This board is restricted (Art. 18).'));
+          return const Err(
+            ForbiddenFailure('This board is restricted (Art. 18).'),
+          );
         }
-        final updated = board.copyWith(title: title.trim(), updatedAt: clock.now().toUtc());
+        final updated = board.copyWith(
+          title: title.trim(),
+          updatedAt: clock.now().toUtc(),
+        );
         _boards[id] = updated;
         return Ok(updated);
       },
@@ -387,11 +446,17 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     );
   }
 
-  Future<Result<Board, AppFailure>> setRestricted({required String id, required bool restricted}) async {
+  Future<Result<Board, AppFailure>> setRestricted({
+    required String id,
+    required bool restricted,
+  }) async {
     final result = await getById(id);
     return result.when(
       ok: (board) {
-        final updated = board.copyWith(restricted: restricted, updatedAt: clock.now().toUtc());
+        final updated = board.copyWith(
+          restricted: restricted,
+          updatedAt: clock.now().toUtc(),
+        );
         _boards[id] = updated;
         securityLog.record(
           type: SecurityEventType.boardRestricted,
@@ -413,7 +478,10 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
       case Ok():
         final out = <BoardNode>[];
         for (final stored in _nodes.values.where((n) => n.boardId == boardId)) {
-          switch (await _cipher.decrypt(dekBytes: dek, ciphertext: stored.ciphertext)) {
+          switch (await _cipher.decrypt(
+            dekBytes: dek,
+            ciphertext: stored.ciphertext,
+          )) {
             case Err():
               continue;
             case Ok(:final value):
@@ -442,9 +510,15 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
       case Ok(:final value):
         final board = value;
         if (board.restricted) {
-          return const Err(ForbiddenFailure('This board is restricted (Art. 18).'));
+          return const Err(
+            ForbiddenFailure('This board is restricted (Art. 18).'),
+          );
         }
-        final siblings = await _decryptedSiblings(boardId: node.boardId, dek: dek, exceptId: node.id);
+        final siblings = await _decryptedSiblings(
+          boardId: node.boardId,
+          dek: dek,
+          exceptId: node.id,
+        );
         switch (EchoPairing.validateWrite(node, siblings)) {
           case Err(:final failure):
             return Err(failure);
@@ -477,10 +551,20 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     switch (board) {
       case Err(:final failure):
         return Err(failure);
-      case Ok():
+      case Ok(:final value):
+        if (value.restricted) {
+          return const Err(
+            ForbiddenFailure('This board is restricted (Art. 18).'),
+          );
+        }
         final cascade = <String>{nodeId};
-        for (final other in _nodes.values.where((n) => n.boardId == stored.boardId && n.id != nodeId)) {
-          switch (await _cipher.decrypt(dekBytes: dek, ciphertext: other.ciphertext)) {
+        for (final other in _nodes.values.where(
+          (n) => n.boardId == stored.boardId && n.id != nodeId,
+        )) {
+          switch (await _cipher.decrypt(
+            dekBytes: dek,
+            ciphertext: other.ciphertext,
+          )) {
             case Err():
               continue;
             case Ok(:final value):
@@ -503,8 +587,13 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     required String exceptId,
   }) async {
     final out = <BoardNode>[];
-    for (final stored in _nodes.values.where((n) => n.boardId == boardId && n.id != exceptId)) {
-      switch (await _cipher.decrypt(dekBytes: dek, ciphertext: stored.ciphertext)) {
+    for (final stored in _nodes.values.where(
+      (n) => n.boardId == boardId && n.id != exceptId,
+    )) {
+      switch (await _cipher.decrypt(
+        dekBytes: dek,
+        ciphertext: stored.ciphertext,
+      )) {
         case Err():
           continue;
         case Ok(:final value):
@@ -530,7 +619,10 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
   }
 
   @override
-  Future<Result<ConsentEvent, AppFailure>> recordConsent(ConsentKind kind, {required bool granted}) async {
+  Future<Result<ConsentEvent, AppFailure>> recordConsent(
+    ConsentKind kind, {
+    required bool granted,
+  }) async {
     final user = _requireUser();
     if (user == null) return const Err(UnauthenticatedFailure());
     final event = ConsentEvent(
@@ -548,7 +640,10 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
   Future<Result<PrivacyExport, AppFailure>> exportMine() async {
     final user = _requireUser();
     if (user == null) return const Err(UnauthenticatedFailure());
-    securityLog.record(type: SecurityEventType.exportRequested, userId: user.id);
+    securityLog.record(
+      type: SecurityEventType.exportRequested,
+      userId: user.id,
+    );
     final boards = _boards.values.where((b) => b.ownerId == user.id).toList();
     final nodes = <Map<String, Object?>>[];
     for (final board in boards) {
@@ -608,25 +703,42 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     return reauth.when(
       ok: (_) async {
         final deleted = await deleteAccount();
-        return deleted.when(ok: (_) => const Ok(null), err: (f) => Err(UnavailableFailure(f.message)));
+        return deleted.when(
+          ok: (_) => const Ok(null),
+          err: (f) => Err(UnavailableFailure(f.message)),
+        );
       },
       err: (f) async => Err(UnauthenticatedFailure(f.message)),
     );
   }
 
-  Future<Result<AuthUser, AuthFailure>> _federated(AuthMethod method, String email) async {
+  Future<Result<AuthUser, AuthFailure>> _federated(
+    AuthMethod method,
+    String email,
+  ) async {
     final existing = _emailIndex[email];
     final isNew = existing == null;
     final account = existing == null
-        ? await _createAccount(email: email, methods: {method}, wrappingSecret: null)
+        ? await _createAccount(
+            email: email,
+            methods: {method},
+            wrappingSecret: null,
+          )
         : _accounts[existing]!;
     account.methods.add(method);
     _sessionDek = account.dek;
     account.lastReauthAt = clock.now().toUtc();
-    final user = _toUser(account, reveal: isNew || account.pendingRecoveryPhrase != null);
+    final user = _toUser(
+      account,
+      reveal: isNew || account.pendingRecoveryPhrase != null,
+    );
     _setCurrent(user);
     await recordConsent(ConsentKind.necessaryStorage, granted: true);
-    securityLog.record(type: SecurityEventType.signInSuccess, userId: user.id, detail: method.name);
+    securityLog.record(
+      type: SecurityEventType.signInSuccess,
+      userId: user.id,
+      detail: method.name,
+    );
     return Ok(user);
   }
 
@@ -637,25 +749,38 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     String? passwordHash,
     String? displayName,
   }) async {
-    final dek = Uint8List.fromList(List<int>.generate(32, (_) => _random.nextInt(256)));
-    final salt = Uint8List.fromList(List<int>.generate(16, (_) => _random.nextInt(256)));
+    final dek = Uint8List.fromList(
+      List<int>.generate(32, (_) => _random.nextInt(256)),
+    );
+    final salt = Uint8List.fromList(
+      List<int>.generate(16, (_) => _random.nextInt(256)),
+    );
     String secret = wrappingSecret ?? '';
     String? phrase;
     if (secret.isEmpty) {
-      final entropy = Uint8List.fromList(List<int>.generate(16, (_) => _random.nextInt(256)));
-      final generated = RecoveryPhrase.fromEntropy(entropy: entropy, wordlist: _wordlist).when(
-        ok: (p) => p.display,
-        err: (_) => base64Url.encode(entropy),
+      final entropy = Uint8List.fromList(
+        List<int>.generate(16, (_) => _random.nextInt(256)),
       );
+      final generated = RecoveryPhrase.fromEntropy(
+        entropy: entropy,
+        wordlist: _wordlist,
+      ).when(ok: (p) => p.display, err: (_) => base64Url.encode(entropy));
       phrase = generated;
       secret = generated;
     }
-    final wrapping = await _derivation.deriveWrappingKey(secret: secret, salt: salt);
+    final wrapping = await _derivation.deriveWrappingKey(
+      secret: secret,
+      salt: salt,
+    );
     final wrapKey = wrapping.when(ok: (bytes) => bytes, err: (_) => dek);
     final wrapped = await _cipher.encrypt(dekBytes: wrapKey, plaintext: dek);
     final wrappedCipher = wrapped.when(
       ok: (c) => c,
-      err: (_) => Ciphertext(nonce: Uint8List(12), cipherBytes: dek, mac: Uint8List(16)),
+      err: (_) => Ciphertext(
+        nonce: Uint8List(12),
+        cipherBytes: dek,
+        mac: Uint8List(16),
+      ),
     );
     final account = _Account(
       id: _uuid.v4(),
@@ -679,7 +804,8 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
       email: account.email,
       displayName: account.displayName,
       methods: {...account.methods},
-      needsRecoveryPhraseReveal: reveal && account.pendingRecoveryPhrase != null,
+      needsRecoveryPhraseReveal:
+          reveal && account.pendingRecoveryPhrase != null,
     );
   }
 
@@ -690,12 +816,14 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
 
   AuthUser? _requireUser() => _current;
 
-  bool _validEmail(String email) => RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
+  bool _validEmail(String email) =>
+      RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
 
   bool _isRateLimited() {
     final last = _lastPasswordAttempt;
     if (last == null) return false;
-    return clock.now().difference(last) < const Duration(milliseconds: 20) && _passwordFailures.length > 20;
+    return clock.now().difference(last) < const Duration(milliseconds: 20) &&
+        _passwordFailures.length > 20;
   }
 
   String _hash(String password) {

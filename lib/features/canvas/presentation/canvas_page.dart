@@ -10,6 +10,9 @@ import '../../../core/a11y/motion.dart';
 import '../../../shared/widgets/chrome.dart';
 import '../../boards/domain/board.dart';
 import '../../boards/domain/echo_pairing.dart';
+import '../../boards/domain/node_motion.dart';
+import '../../privacy/domain/privacy_models.dart';
+import 'paper_slip.dart';
 
 class CanvasPage extends ConsumerStatefulWidget {
   const CanvasPage({required this.boardId, super.key});
@@ -27,7 +30,8 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
   String? _summonError;
   int _focusedIndex = 0;
   bool _summoning = false;
-  bool _echoConsentedThisSession = false;
+  bool _echoConsented = false;
+  bool _dragging = false;
   final _note = TextEditingController();
   final _seen = <String>{};
 
@@ -59,11 +63,16 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
     final canvas = ref.read(canvasRepositoryProvider);
     final board = await boards.getById(widget.boardId);
     final nodes = await canvas.listNodes(widget.boardId);
+    final consents = await ref.read(privacyRepositoryProvider).consents();
     if (!mounted) return;
     setState(() {
       _board = board.okOrNull;
       _error = board.errOrNull?.message ?? nodes.errOrNull?.message;
       _nodes = nodes.okOrNull ?? [];
+      _echoConsented = hasGrantedConsent(
+        consents.okOrNull ?? const [],
+        ConsentKind.remoteEcho,
+      );
       _seen.addAll(_nodes.map((n) => n.id));
     });
     await _untangleEchoes();
@@ -103,8 +112,14 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
       if (swatch.kind != NodeKind.swatch) continue;
       for (final echo in next) {
         if (echo.kind != NodeKind.echo) continue;
-        if ((swatch.x - echo.x).abs() < 200 && (swatch.y - echo.y).abs() < 110) {
-          await persist(swatch.copyWith(x: echo.x + EchoPairing.slipWidth + 36, y: swatch.y));
+        if ((swatch.x - echo.x).abs() < 200 &&
+            (swatch.y - echo.y).abs() < 110) {
+          await persist(
+            swatch.copyWith(
+              x: echo.x + EchoPairing.slipWidth + 36,
+              y: swatch.y,
+            ),
+          );
           break;
         }
       }
@@ -113,7 +128,13 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
     if (changed && mounted) setState(() => _nodes = next);
   }
 
+  bool get _restricted => _board?.restricted == true;
+
   Future<void> _addNote() async {
+    if (_restricted) {
+      announce(context, 'This board is restricted (Art. 18).');
+      return;
+    }
     final text = _note.text.trim();
     if (text.isEmpty) return;
     final humans = _nodes.where((n) => n.kind == NodeKind.text).length;
@@ -143,6 +164,10 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
   }
 
   Future<void> _addSwatch() async {
+    if (_restricted) {
+      announce(context, 'This board is restricted (Art. 18).');
+      return;
+    }
     const colors = [0xFF1F4E5A, 0xFFC45C26, 0xFF2C2C2C, 0xFFE8DCC8];
     final node = BoardNode(
       id: const Uuid().v4(),
@@ -161,28 +186,34 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
   }
 
   Future<void> _nudge(int dx, int dy) async {
-    if (_nodes.isEmpty) return;
-    final node = _nodes[_focusedIndex.clamp(0, _nodes.length - 1)];
-    final moved = node.copyWith(x: node.x + dx, y: node.y + dy);
-    final canvas = ref.read(canvasRepositoryProvider);
-    final result = await canvas.upsert(moved);
-    var next = [for (final n in _nodes) n.id == moved.id ? moved : n];
-    result.when(
-      ok: (updated) => next = [for (final n in next) n.id == updated.id ? updated : n],
-      err: (_) {},
-    );
-    if (node.kind == NodeKind.text) {
-      final echo = EchoPairing.echoFor(_nodes, node.id);
-      if (echo != null) {
-        final shifted = echo.copyWith(x: echo.x + dx, y: echo.y + dy);
-        final echoResult = await canvas.upsert(shifted);
-        echoResult.when(
-          ok: (updated) => next = [for (final n in next) n.id == updated.id ? updated : n],
-          err: (_) {},
-        );
-      }
+    if (_nodes.isEmpty || _restricted) {
+      if (_restricted) announce(context, 'This board is restricted (Art. 18).');
+      return;
     }
-    if (mounted) setState(() => _nodes = next);
+    final node = _nodes[_focusedIndex.clamp(0, _nodes.length - 1)];
+    await _persistMove(node.id, dx.toDouble(), dy.toDouble());
+  }
+
+  Future<void> _persistMove(String id, double dx, double dy) async {
+    if (dx == 0 && dy == 0) return;
+    final previous = List<BoardNode>.from(_nodes);
+    final next = NodeMotion.moved(previous, id: id, dx: dx, dy: dy);
+    if (identical(next, previous)) return;
+    setState(() => _nodes = next);
+    final canvas = ref.read(canvasRepositoryProvider);
+    String? error;
+    for (final node in next) {
+      final old = previous.firstWhere((item) => item.id == node.id);
+      if (old.x == node.x && old.y == node.y) continue;
+      final result = await canvas.upsert(node);
+      result.when(ok: (_) {}, err: (failure) => error = failure.message);
+    }
+    if (!mounted) return;
+    if (error != null) {
+      announce(context, error!);
+      return;
+    }
+    await _untangleEchoes();
   }
 
   Future<bool> _confirmRemoteEcho() async {
@@ -212,13 +243,26 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
   }
 
   Future<void> _summonEcho() async {
+    if (_restricted) {
+      announce(context, 'This board is restricted (Art. 18).');
+      return;
+    }
     final parent = _selected;
-    if (parent == null || !EchoPairing.canSummon(parent, _nodes) || _summoning) return;
+    if (parent == null || !EchoPairing.canSummon(parent, _nodes) || _summoning)
+      return;
     final composer = ref.read(echoComposerProvider);
-    if (composer.remote && !_echoConsentedThisSession) {
+    if (composer.remote && !_echoConsented) {
       final agreed = await _confirmRemoteEcho();
       if (!mounted || !agreed) return;
-      _echoConsentedThisSession = true;
+      final recorded = await ref
+          .read(privacyRepositoryProvider)
+          .recordConsent(ConsentKind.remoteEcho, granted: true);
+      if (!mounted) return;
+      recorded.when(
+        ok: (_) => _echoConsented = true,
+        err: (failure) => announce(context, failure.message),
+      );
+      if (!_echoConsented) return;
     }
     setState(() {
       _summoning = true;
@@ -272,7 +316,10 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
     result.when(
       ok: (_) {
         setState(() {
-          _nodes = [for (final n in _nodes) if (n.id != id) n];
+          _nodes = [
+            for (final n in _nodes)
+              if (n.id != id) n,
+          ];
           if (_nodes.isEmpty) {
             _focusedIndex = 0;
           } else {
@@ -283,6 +330,108 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
       },
       err: (failure) => announce(context, failure.message),
     );
+  }
+
+  Future<void> _saveText(BoardNode node, String text) async {
+    if (_restricted) {
+      announce(context, 'This board is restricted (Art. 18).');
+      return;
+    }
+    final result = await ref
+        .read(canvasRepositoryProvider)
+        .upsert(node.copyWith(text: text));
+    if (!mounted) return;
+    result.when(
+      ok: (updated) {
+        setState(
+          () => _nodes = [
+            for (final item in _nodes) item.id == updated.id ? updated : item,
+          ],
+        );
+        announce(context, 'Note saved.');
+      },
+      err: (failure) => announce(context, failure.message),
+    );
+  }
+
+  Future<void> _deleteHuman(BoardNode node) async {
+    if (_restricted) {
+      announce(context, 'This board is restricted (Art. 18).');
+      return;
+    }
+    final confirmed = await showFDialog<bool>(
+      context: context,
+      builder: (context, style, animation) => FDialog(
+        animation: animation,
+        title: const Text('Remove this slip'),
+        body: const Text(
+          'The note and its echo, if any, will be removed from this board.',
+        ),
+        actions: [
+          FButton(
+            variant: FButtonVariant.destructive,
+            onPress: () => Navigator.of(context).pop(true),
+            child: const Text('Delete this note'),
+          ),
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(context).pop(false),
+            child: const Text('Keep it'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    final result = await ref.read(canvasRepositoryProvider).delete(node.id);
+    if (!mounted) return;
+    result.when(
+      ok: (_) {
+        setState(() {
+          _nodes = [
+            for (final item in _nodes)
+              if (item.id != node.id && item.parentId != node.id) item,
+          ];
+          if (_nodes.isEmpty) {
+            _focusedIndex = 0;
+          } else {
+            _focusedIndex = _focusedIndex.clamp(0, _nodes.length - 1);
+          }
+        });
+        announce(context, 'Note deleted.');
+      },
+      err: (failure) => announce(context, failure.message),
+    );
+  }
+
+  void _acknowledgePhrase() {
+    ref.read(authRepositoryProvider).acknowledgeRecoveryPhrase();
+    announce(context, 'Recovery phrase saved.');
+    setState(() {});
+  }
+
+  Future<void> _commitDrag(String id) async {
+    setState(() => _dragging = false);
+    final canvas = ref.read(canvasRepositoryProvider);
+    final node = _nodes.where((item) => item.id == id);
+    if (node.isEmpty) return;
+    String? error;
+    Future<void> save(BoardNode value) async {
+      final result = await canvas.upsert(value);
+      result.when(ok: (_) {}, err: (failure) => error = failure.message);
+    }
+
+    await save(node.first);
+    if (node.first.kind == NodeKind.text) {
+      final echo = EchoPairing.echoFor(_nodes, id);
+      if (echo != null) await save(echo);
+    }
+    if (!mounted) return;
+    if (error != null) {
+      announce(context, error!);
+      return;
+    }
+    announce(context, 'Moved');
+    await _untangleEchoes();
   }
 
   bool get _highContrast {
@@ -296,7 +445,12 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
     final phrase = ref.watch(authRepositoryProvider).pendingRecoveryPhrase;
     if (_error != null) {
       return PenumbraChrome(
-        child: PenumbraPage(child: FAlert(variant: FAlertVariant.destructive, title: Text(_error!))),
+        child: PenumbraPage(
+          child: FAlert(
+            variant: FAlertVariant.destructive,
+            title: Text(_error!),
+          ),
+        ),
       );
     }
     if (_board == null) {
@@ -305,10 +459,13 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _nudge(-16, 0),
-        const SingleActivator(LogicalKeyboardKey.arrowRight): () => _nudge(16, 0),
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+            _nudge(-16, 0),
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+            _nudge(16, 0),
         const SingleActivator(LogicalKeyboardKey.arrowUp): () => _nudge(0, -16),
-        const SingleActivator(LogicalKeyboardKey.arrowDown): () => _nudge(0, 16),
+        const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+            _nudge(0, 16),
       },
       child: Focus(
         autofocus: true,
@@ -326,17 +483,42 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
                 highContrast: _highContrast,
                 phrase: phrase,
                 summonError: _summonError,
+                panEnabled: !_dragging,
                 appear: _appear,
                 onFocus: (id) => setState(() {
                   final i = _nodes.indexWhere((n) => n.id == id);
                   if (i >= 0) _focusedIndex = i;
                 }),
-                onDismissEcho: _dismissEcho,
+                onDismissEcho: _restricted ? null : _dismissEcho,
+                onAcknowledgePhrase: _acknowledgePhrase,
+                onSaveText: _restricted
+                    ? null
+                    : (node, text) => _saveText(node, text),
+                onDelete: _restricted ? null : _deleteHuman,
+                onDragStart: _restricted
+                    ? null
+                    : (id) => setState(() {
+                        _dragging = true;
+                        final i = _nodes.indexWhere((n) => n.id == id);
+                        if (i >= 0) _focusedIndex = i;
+                      }),
+                onDrag: _restricted
+                    ? null
+                    : (id, delta) => setState(() {
+                        _nodes = NodeMotion.moved(
+                          _nodes,
+                          id: id,
+                          dx: delta.dx,
+                          dy: delta.dy,
+                        );
+                      }),
+                onDragEnd: _restricted ? null : _commitDrag,
                 toolbar: _ComposeBar(
                   controller: _note,
+                  enabled: !_restricted,
                   onPlace: _addNote,
                   onSwatch: _addSwatch,
-                  onSummon: _canSummon ? _summonEcho : null,
+                  onSummon: !_restricted && _canSummon ? _summonEcho : null,
                   summoning: _summoning,
                 ),
               );
@@ -379,14 +561,26 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
   }
 }
 
-List<BoardNode> _paintOrder(List<BoardNode> nodes, List<BoardNode> conversation, String? focusedId) {
-  final humans = [for (final node in conversation) if (node.kind != NodeKind.echo) node];
-  final echoes = [for (final node in conversation) if (node.kind == NodeKind.echo) node];
+List<BoardNode> _paintOrder(
+  List<BoardNode> nodes,
+  List<BoardNode> conversation,
+  String? focusedId,
+) {
+  final humans = [
+    for (final node in conversation)
+      if (node.kind != NodeKind.echo) node,
+  ];
+  final echoes = [
+    for (final node in conversation)
+      if (node.kind == NodeKind.echo) node,
+  ];
   final ordered = [...humans, ...echoes];
   if (focusedId == null) return ordered;
   return [
-    for (final node in ordered) if (node.id != focusedId) node,
-    for (final node in nodes) if (node.id == focusedId) node,
+    for (final node in ordered)
+      if (node.id != focusedId) node,
+    for (final node in nodes)
+      if (node.id == focusedId) node,
   ];
 }
 
@@ -399,9 +593,16 @@ class _Atelier extends StatelessWidget {
     required this.highContrast,
     required this.phrase,
     required this.summonError,
+    required this.panEnabled,
     required this.appear,
     required this.onFocus,
     required this.onDismissEcho,
+    required this.onAcknowledgePhrase,
+    required this.onSaveText,
+    required this.onDelete,
+    required this.onDragStart,
+    required this.onDrag,
+    required this.onDragEnd,
     required this.toolbar,
   });
 
@@ -412,15 +613,26 @@ class _Atelier extends StatelessWidget {
   final bool highContrast;
   final String? phrase;
   final String? summonError;
+  final bool panEnabled;
   final Widget Function(String id, Widget child) appear;
   final ValueChanged<String> onFocus;
-  final ValueChanged<String> onDismissEcho;
+  final ValueChanged<String>? onDismissEcho;
+  final VoidCallback onAcknowledgePhrase;
+  final void Function(BoardNode node, String text)? onSaveText;
+  final ValueChanged<BoardNode>? onDelete;
+  final ValueChanged<String>? onDragStart;
+  final void Function(String id, Offset delta)? onDrag;
+  final ValueChanged<String>? onDragEnd;
   final Widget toolbar;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
-    final well = Color.lerp(theme.colors.background, theme.colors.foreground, 0.04)!;
+    final well = Color.lerp(
+      theme.colors.background,
+      theme.colors.foreground,
+      0.04,
+    )!;
     return ColoredBox(
       color: well,
       child: Padding(
@@ -435,10 +647,30 @@ class _Atelier extends StatelessWidget {
                   '$phrase\nOAuth and passkey accounts wrap your key with this phrase. We cannot recover it.',
                 ),
               ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FButton(
+                  onPress: onAcknowledgePhrase,
+                  child: const Text('I have saved this phrase'),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (board.restricted) ...[
+              const FAlert(
+                title: Text('This board is restricted (Art. 18).'),
+                subtitle: Text(
+                  'Place, edit, delete, and move are paused until you unrestrict it.',
+                ),
+              ),
               const SizedBox(height: 12),
             ],
             if (summonError != null) ...[
-              FAlert(variant: FAlertVariant.destructive, title: Text(summonError!)),
+              FAlert(
+                variant: FAlertVariant.destructive,
+                title: Text(summonError!),
+              ),
               const SizedBox(height: 12),
             ],
             _RunningHead(title: board.title, count: nodes.length),
@@ -453,12 +685,16 @@ class _Atelier extends StatelessWidget {
                       ? const []
                       : [
                           BoxShadow(
-                            color: theme.colors.foreground.withValues(alpha: 0.18),
+                            color: theme.colors.foreground.withValues(
+                              alpha: 0.18,
+                            ),
                             blurRadius: 40,
                             offset: const Offset(0, 18),
                           ),
                           BoxShadow(
-                            color: theme.colors.foreground.withValues(alpha: 0.06),
+                            color: theme.colors.foreground.withValues(
+                              alpha: 0.06,
+                            ),
                             blurRadius: 4,
                             offset: const Offset(0, 1),
                           ),
@@ -467,6 +703,7 @@ class _Atelier extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: InteractiveViewer(
+                    panEnabled: panEnabled,
                     constrained: false,
                     minScale: 0.5,
                     maxScale: 2.5,
@@ -493,19 +730,46 @@ class _Atelier extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            for (final node in _paintOrder(nodes, conversation, focusedId))
+                            for (final node in _paintOrder(
+                              nodes,
+                              conversation,
+                              focusedId,
+                            ))
                               Positioned(
                                 left: node.x,
                                 top: node.y,
                                 child: appear(
                                   node.id,
-                                  _PaperSlip(
+                                  PaperSlip(
                                     node: node,
-                                    numeral: EchoPairing.numeral(conversation, node),
+                                    numeral: EchoPairing.numeral(
+                                      conversation,
+                                      node,
+                                    ),
                                     selected: node.id == focusedId,
                                     highContrast: highContrast,
+                                    readOnly: board.restricted,
                                     onFocus: () => onFocus(node.id),
-                                    onDismiss: node.kind == NodeKind.echo ? () => onDismissEcho(node.id) : null,
+                                    onDismiss:
+                                        node.kind == NodeKind.echo &&
+                                            onDismissEcho != null
+                                        ? () => onDismissEcho!(node.id)
+                                        : null,
+                                    onSaveText: onSaveText == null
+                                        ? null
+                                        : (text) => onSaveText!(node, text),
+                                    onDelete: onDelete == null
+                                        ? null
+                                        : () => onDelete!(node),
+                                    onDragStart: onDragStart == null
+                                        ? null
+                                        : () => onDragStart!(node.id),
+                                    onDrag: onDrag == null
+                                        ? null
+                                        : (delta) => onDrag!(node.id, delta),
+                                    onDragEnd: onDragEnd == null
+                                        ? null
+                                        : () => onDragEnd!(node.id),
                                   ),
                                 ),
                               ),
@@ -579,6 +843,7 @@ class _ComposeBar extends StatelessWidget {
     required this.onSwatch,
     required this.onSummon,
     required this.summoning,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
@@ -586,6 +851,7 @@ class _ComposeBar extends StatelessWidget {
   final VoidCallback onSwatch;
   final VoidCallback? onSummon;
   final bool summoning;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -612,20 +878,32 @@ class _ComposeBar extends StatelessWidget {
               final tight = constraints.maxWidth < 620;
               final field = FTextField(
                 hint: 'A thought, privately held',
+                enabled: enabled,
                 control: FTextFieldControl.managed(controller: controller),
               );
               final actions = Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  FButton(onPress: onPlace, child: const Text('Place')),
-                  FButton(variant: FButtonVariant.outline, onPress: onSwatch, child: const Text('Swatch')),
+                  FButton(
+                    onPress: enabled ? onPlace : null,
+                    child: const Text('Place'),
+                  ),
+                  FButton(
+                    variant: FButtonVariant.outline,
+                    onPress: enabled ? onSwatch : null,
+                    child: const Text('Swatch'),
+                  ),
                   if (onSummon != null || summoning)
                     FButton(
                       variant: FButtonVariant.outline,
-                      onPress: summoning ? null : onSummon,
+                      onPress: summoning || !enabled ? null : onSummon,
                       prefix: summoning
-                          ? const SizedBox(width: 14, height: 14, child: FCircularProgress())
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: FCircularProgress(),
+                            )
                           : null,
                       child: const Text('Summon an echo'),
                     ),
@@ -634,11 +912,7 @@ class _ComposeBar extends StatelessWidget {
               if (tight) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    field,
-                    const SizedBox(height: 8),
-                    actions,
-                  ],
+                  children: [field, const SizedBox(height: 8), actions],
                 );
               }
               return Row(
@@ -655,7 +929,11 @@ class _ComposeBar extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: SizedBox(
                       height: 28,
-                      child: VerticalDivider(width: 1, thickness: 1, color: theme.colors.border),
+                      child: VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: theme.colors.border,
+                      ),
                     ),
                   ),
                   Expanded(child: field),
@@ -691,8 +969,12 @@ class _CardIndex extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colors.background,
         border: Border(
-          left: stacked ? BorderSide.none : BorderSide(color: theme.colors.border),
-          top: stacked ? BorderSide(color: theme.colors.border) : BorderSide.none,
+          left: stacked
+              ? BorderSide.none
+              : BorderSide(color: theme.colors.border),
+          top: stacked
+              ? BorderSide(color: theme.colors.border)
+              : BorderSide.none,
         ),
       ),
       child: Padding(
@@ -709,8 +991,11 @@ class _CardIndex extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'A conversation. Arrow keys move the selected slip.',
-              style: theme.typography.xs.copyWith(color: theme.colors.mutedForeground, height: 1.4),
+              'A conversation. Arrow keys or Move reposition the selected slip.',
+              style: theme.typography.xs.copyWith(
+                color: theme.colors.mutedForeground,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 8),
             DecoratedBox(
@@ -740,13 +1025,20 @@ class _CardIndex extends StatelessWidget {
                         decoration: BoxDecoration(
                           border: Border(
                             left: BorderSide(
-                              color: selected ? theme.colors.primary : Colors.transparent,
+                              color: selected
+                                  ? theme.colors.primary
+                                  : Colors.transparent,
                               width: 2,
                             ),
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.fromLTRB(echo ? 28 : 12, 12, 8, 12),
+                          padding: EdgeInsets.fromLTRB(
+                            echo ? 28 : 12,
+                            12,
+                            8,
+                            12,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -754,19 +1046,27 @@ class _CardIndex extends StatelessWidget {
                                 numeral,
                                 style: theme.typography.xs.copyWith(
                                   fontFamily: PenumbraInk.displayFamily,
-                                  fontStyle: echo ? FontStyle.italic : FontStyle.normal,
-                                  color: selected ? theme.colors.primary : theme.colors.mutedForeground,
+                                  fontStyle: echo
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
+                                  color: selected
+                                      ? theme.colors.primary
+                                      : theme.colors.mutedForeground,
                                   letterSpacing: 0.8,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                echo ? (node.text ?? 'Echo') : node.semanticsLabel,
+                                echo
+                                    ? (node.text ?? 'Echo')
+                                    : node.semanticsLabel,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.typography.sm.copyWith(
                                   fontFamily: PenumbraInk.displayFamily,
-                                  fontStyle: echo ? FontStyle.italic : FontStyle.normal,
+                                  fontStyle: echo
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
                                   height: 1.3,
                                 ),
                               ),
@@ -780,157 +1080,6 @@ class _CardIndex extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PaperSlip extends StatelessWidget {
-  const _PaperSlip({
-    required this.node,
-    required this.numeral,
-    required this.selected,
-    required this.highContrast,
-    required this.onFocus,
-    this.onDismiss,
-  });
-
-  final BoardNode node;
-  final String numeral;
-  final bool selected;
-  final bool highContrast;
-  final VoidCallback onFocus;
-  final VoidCallback? onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final echo = node.kind == NodeKind.echo;
-    final slip = ConstrainedBox(
-      constraints: BoxConstraints(minWidth: echo ? 168 : 176, maxWidth: echo ? 240 : 260),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.colors.background,
-          borderRadius: BorderRadius.circular(3),
-          border: Border.all(
-            color: selected
-                ? theme.colors.primary
-                : echo
-                ? theme.colors.primary.withValues(alpha: highContrast ? 1 : 0.45)
-                : theme.colors.border,
-            width: selected ? 1.5 : 1,
-          ),
-          boxShadow: highContrast || echo
-              ? const []
-              : [
-                  BoxShadow(
-                    color: theme.colors.foreground.withValues(alpha: selected ? 0.16 : 0.08),
-                    blurRadius: selected ? 22 : 14,
-                    offset: const Offset(0, 10),
-                  ),
-                  BoxShadow(
-                    color: theme.colors.foreground.withValues(alpha: 0.04),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    numeral,
-                    style: theme.typography.xs.copyWith(
-                      fontFamily: PenumbraInk.displayFamily,
-                      fontStyle: echo ? FontStyle.italic : FontStyle.normal,
-                      color: selected ? theme.colors.primary : theme.colors.mutedForeground,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (echo && selected && onDismiss != null)
-                    Semantics(
-                      button: true,
-                      label: 'Dismiss this echo',
-                      child: GestureDetector(
-                        onTap: onDismiss,
-                        child: Text(
-                          'Dismiss',
-                          style: theme.typography.xs.copyWith(
-                            color: theme.colors.primary,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                      ),
-                    )
-                  else if (selected)
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(color: theme.colors.primary, shape: BoxShape.circle),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              if (node.kind == NodeKind.swatch)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ColoredBox(
-                      color: Color(node.colorArgb ?? 0xFF000000),
-                      child: const SizedBox(width: 132, height: 88),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Specimen',
-                      style: theme.typography.xs.copyWith(
-                        color: theme.colors.mutedForeground,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Text(
-                  node.text ?? (echo ? 'Echo' : 'Untitled note'),
-                  style: theme.typography.md.copyWith(
-                    fontFamily: PenumbraInk.displayFamily,
-                    fontStyle: echo ? FontStyle.italic : FontStyle.normal,
-                    height: 1.35,
-                    fontWeight: echo ? FontWeight.w400 : FontWeight.w500,
-                    color: echo ? theme.colors.mutedForeground : theme.colors.foreground,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: echo ? '${node.semanticsLabel}, $numeral' : 'Card $numeral, ${node.semanticsLabel}',
-      child: Focus(
-        onFocusChange: (hasFocus) {
-          if (hasFocus) onFocus();
-        },
-        child: GestureDetector(
-          onTap: onFocus,
-          child: selected && !highContrast && !echo
-              ? DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: theme.colors.primary.withValues(alpha: 0.45)),
-                  ),
-                  child: Padding(padding: const EdgeInsets.all(5), child: slip),
-                )
-              : slip,
         ),
       ),
     );
@@ -960,7 +1109,10 @@ class _EchoHairlinePainter extends CustomPainter {
       }
       if (parent == null) continue;
       canvas.drawLine(
-        Offset(parent.x + EchoPairing.slipWidth, parent.y + EchoPairing.slipHeight * 0.45),
+        Offset(
+          parent.x + EchoPairing.slipWidth,
+          parent.y + EchoPairing.slipHeight * 0.45,
+        ),
         Offset(echo.x, echo.y + 36),
         paint,
       );
@@ -992,15 +1144,23 @@ class _SheetPainter extends CustomPainter {
     canvas.drawRect(Offset.zero & size, Paint()..color = paper);
 
     const inset = 36.0;
-    final plate = Rect.fromLTWH(inset, inset, size.width - inset * 2, size.height - inset * 2);
+    final plate = Rect.fromLTWH(
+      inset,
+      inset,
+      size.width - inset * 2,
+      size.height - inset * 2,
+    );
     final rulePaint = Paint()
       ..color = rule
       ..strokeWidth = 1;
 
-    canvas.drawRect(plate, Paint()
-      ..color = rule
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.8);
+    canvas.drawRect(
+      plate,
+      Paint()
+        ..color = rule
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8,
+    );
 
     _crop(canvas, plate.topLeft, 1, 1, rulePaint);
     _crop(canvas, plate.topRight, -1, 1, rulePaint);
@@ -1028,7 +1188,11 @@ class _SheetPainter extends CustomPainter {
         ..strokeWidth = 0.6;
       const step = 28.0;
       for (var y = plate.top + 48; y < plate.bottom - 8; y += step) {
-        canvas.drawLine(Offset(plate.left + 16, y), Offset(plate.right - 16, y), line);
+        canvas.drawLine(
+          Offset(plate.left + 16, y),
+          Offset(plate.right - 16, y),
+          line,
+        );
       }
       final dots = Paint()..color = rule;
       for (var x = plate.left + 16; x < plate.right - 8; x += step) {

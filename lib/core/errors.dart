@@ -18,7 +18,8 @@ final class ForbiddenFailure extends AppFailure {
 }
 
 final class UnauthenticatedFailure extends AppFailure {
-  const UnauthenticatedFailure([String message = 'Sign in required.']) : super('unauthenticated', message);
+  const UnauthenticatedFailure([String message = 'Sign in required.'])
+    : super('unauthenticated', message);
 }
 
 final class CryptoFailure extends AppFailure {

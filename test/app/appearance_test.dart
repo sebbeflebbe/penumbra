@@ -18,7 +18,10 @@ void main() {
     final controller = AppearanceController(store: store);
     controller.cycle();
     await Future<void>.delayed(Duration.zero);
-    expect(store.read(AppearanceController.storageKey), PenumbraAppearance.light.name);
+    expect(
+      store.read(AppearanceController.storageKey),
+      PenumbraAppearance.light.name,
+    );
     controller.set(PenumbraAppearance.highContrast);
     await Future<void>.delayed(Duration.zero);
     expect(store.read(AppearanceController.storageKey), 'highContrast');

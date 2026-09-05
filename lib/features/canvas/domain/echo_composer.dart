@@ -31,7 +31,11 @@ EchoComposer penumbraEchoComposer({
   http.Client? client,
 }) {
   if (geminiApiKey.trim().isEmpty) return const LocalEchoComposer();
-  return GeminiEchoComposer(apiKey: geminiApiKey, systemPrompt: systemPrompt, client: client);
+  return GeminiEchoComposer(
+    apiKey: geminiApiKey,
+    systemPrompt: systemPrompt,
+    client: client,
+  );
 }
 
 class LocalEchoComposer implements EchoComposer {
@@ -64,15 +68,46 @@ class LocalEchoComposer implements EchoComposer {
 
   static String _family(String lower) {
     bool has(List<String> needles) => needles.any(lower.contains);
-    if (has(const ['sad', 'sorrow', 'grief', 'lonely', 'alone', 'miss you', 'despair', 'cry', 'hurt'])) {
+    if (has(const [
+      'sad',
+      'sorrow',
+      'grief',
+      'lonely',
+      'alone',
+      'miss you',
+      'despair',
+      'cry',
+      'hurt',
+    ])) {
       return 'sorrow';
     }
-    if (has(const ['problem', 'stuck', 'fail', 'wrong', 'broken', 'worry', 'anxi', 'fear', 'afraid', 'issue'])) {
+    if (has(const [
+      'problem',
+      'stuck',
+      'fail',
+      'wrong',
+      'broken',
+      'worry',
+      'anxi',
+      'fear',
+      'afraid',
+      'issue',
+    ])) {
       return 'trouble';
     }
-    if (has(const ['angry', 'anger', 'rage', 'hate', 'furious'])) return 'anger';
-    if (has(const ['private', 'secret', 'hidden', 'hide', 'unseen'])) return 'privacy';
-    if (has(const ['lost', 'unsure', 'maybe', "don't know", 'perhaps', 'confused'])) return 'doubt';
+    if (has(const ['angry', 'anger', 'rage', 'hate', 'furious']))
+      return 'anger';
+    if (has(const ['private', 'secret', 'hidden', 'hide', 'unseen']))
+      return 'privacy';
+    if (has(const [
+      'lost',
+      'unsure',
+      'maybe',
+      "don't know",
+      'perhaps',
+      'confused',
+    ]))
+      return 'doubt';
     if (has(const ['love', 'dear', 'miss', 'heart'])) return 'tender';
     if (has(const ['hope', 'wish', 'want', 'need'])) return 'longing';
     return 'still';
@@ -170,10 +205,7 @@ class GeminiEchoComposer implements EchoComposer {
                   ],
                 },
               ],
-              'generationConfig': {
-                'temperature': 0.6,
-                'maxOutputTokens': 160,
-              },
+              'generationConfig': {'temperature': 0.6, 'maxOutputTokens': 160},
             }),
           )
           .timeout(timeout);
@@ -216,7 +248,11 @@ class GeminiEchoComposer implements EchoComposer {
 }
 
 String clipWords(String text, {int max = 60}) {
-  final words = text.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
+  final words = text
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty)
+      .toList();
   if (words.length <= max) return words.join(' ');
   return '${words.take(max).join(' ')}…';
 }

@@ -29,7 +29,7 @@ Create the project in **eu-central-1 (Frankfurt)**. Apply `supabase/migrations/`
 
 ## Auth
 
-Passkeys, Google, GitHub, magic link, and password (12+ characters). Passkeys are first in the layout. OAuth users receive a 12-word recovery phrase once — that phrase wraps the data-encryption key when there is no password.
+Passkeys, Google, GitHub, magic link, and password (12+ characters). Passkeys are first in the layout. On a configured Supabase project they use WebAuthn (`auth.passkey`); enable Passkeys in the Frankfurt Auth settings and set `PENUMBRA_ORIGIN` to the exact HTTPS origin (or localhost) or the ceremony will fail. The in-memory demo still fakes a passkey session. OAuth users receive a 12-word recovery phrase once — that phrase wraps the data-encryption key when there is no password. WebAuthn PRF wrapping is not assumed.
 
 ## GDPR and cybersecurity (honest scope)
 

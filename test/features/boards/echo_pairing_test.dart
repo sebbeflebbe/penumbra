@@ -4,23 +4,23 @@ import 'package:penumbra/features/boards/domain/board.dart';
 import 'package:penumbra/features/boards/domain/echo_pairing.dart';
 
 BoardNode human({required String id, String text = 'A thought'}) => BoardNode(
-      id: id,
-      boardId: 'b',
-      x: 0,
-      y: 0,
-      kind: NodeKind.text,
-      text: text,
-    );
+  id: id,
+  boardId: 'b',
+  x: 0,
+  y: 0,
+  kind: NodeKind.text,
+  text: text,
+);
 
 BoardNode echo({required String id, required String parentId}) => BoardNode(
-      id: id,
-      boardId: 'b',
-      x: 28,
-      y: 36,
-      kind: NodeKind.echo,
-      text: 'Quieter.',
-      parentId: parentId,
-    );
+  id: id,
+  boardId: 'b',
+  x: 28,
+  y: 36,
+  kind: NodeKind.echo,
+  text: 'Quieter.',
+  parentId: parentId,
+);
 
 void main() {
   test('a second echo on the same parent is refused', () {
@@ -38,7 +38,10 @@ void main() {
     final first = echo(id: 'e1', parentId: 'h1');
     expect(EchoPairing.canSummon(parent, [parent, first]), isFalse);
     expect(EchoPairing.canSummon(parent, [parent]), isTrue);
-    expect(EchoPairing.validateWrite(echo(id: 'e2', parentId: 'h1'), [parent]).isOk, isTrue);
+    expect(
+      EchoPairing.validateWrite(echo(id: 'e2', parentId: 'h1'), [parent]).isOk,
+      isTrue,
+    );
   });
 
   test('swatches cannot be echoed', () {
@@ -51,7 +54,9 @@ void main() {
       colorArgb: 0xFF000000,
     );
     expect(EchoPairing.canSummon(swatch, [swatch]), isFalse);
-    final result = EchoPairing.validateWrite(echo(id: 'e1', parentId: 's1'), [swatch]);
+    final result = EchoPairing.validateWrite(echo(id: 'e1', parentId: 's1'), [
+      swatch,
+    ]);
     expect(result.isErr, isTrue);
   });
 

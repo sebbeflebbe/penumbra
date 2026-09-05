@@ -1,5 +1,9 @@
 class LegalDocument {
-  const LegalDocument({required this.title, required this.slug, required this.body});
+  const LegalDocument({
+    required this.title,
+    required this.slug,
+    required this.body,
+  });
 
   final String title;
   final String slug;
@@ -63,9 +67,9 @@ No commercial register. No VAT. Personal interview project.
     body: '''
 The European Accessibility Act applies from 28 June 2025. We design Penumbra against EN 301 549 v3.2.1 (web chapter = WCAG 2.1 Level AA). A personal notebook is likely outside the Act’s sectoral scope. We still treat the standard as the bar and do not claim full EAA conformance.
 
-Implemented: skip-to-content focuses a main landmark, visible focus rings via Forui, named and persisted appearance (System, Light, Dark, High contrast), true black/white high-contrast, reduced-motion no-ops (WCAG 2.2.3), named canvas cards, a list alternative to the spatial canvas, 48px-class targets on primary actions, Flutter web semantics enabled on startup.
+Implemented: skip-to-content focuses a main landmark, visible focus rings via Forui, named and persisted appearance (System, Light, Dark, High contrast), true black/white high-contrast, reduced-motion no-ops (WCAG 2.2.3), named canvas cards, a list alternative to the spatial canvas, named Edit / Delete / Move / Restrict / Unrestrict controls, 48px-class targets on primary actions, Flutter web semantics enabled on startup.
 
-Known gaps: Flutter web paints to a canvas, so the accessibility tree is an opt-in overlay. Contrast of third-party Forui defaults is AA in high-contrast mode by construction; the zinc theme should be verified on a contrast checker before a formal claim. This statement is dated 5 September 2026.
+Known gaps: Flutter web paints to a canvas, so the accessibility tree is an opt-in overlay. InteractiveViewer is not itself a spatial map in that tree — the Index and the Move handle are the mitigation. Contrast of third-party Forui defaults is AA in high-contrast mode by construction; the zinc theme helper text is darkened relative to the paper ground but is not a formal laboratory measurement. This statement is dated 5 September 2026.
 
 Contact: the controller email on the privacy page.
 ''',
