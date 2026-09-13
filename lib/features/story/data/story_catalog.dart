@@ -51,7 +51,7 @@ OAuth users do not have a password to derive a wrapping key. They get a twelve-w
       title: 'Canvas and crypto',
       control: 'GDPR Art. 32 / NIS2 crypto policy',
       body: '''
-Cards are widgets, not paint, so they exist in the semantics tree. A list beside the canvas is the screen-reader order. Arrow keys or a named Move handle reposition the focused card. Human slips can be edited and deleted; deleting a parent also removes its echo.
+Cards are widgets, not paint, so they exist in the semantics tree. A list beside the canvas is the screen-reader order: Index rows are focusable, Up and Down move selection without stealing the sheet’s arrow-nudge, and Move announces the card numeral then returns focus to the handle. Arrow keys or a named Move handle reposition the focused card. Human slips can be edited and deleted; deleting a parent also removes its echo.
 
 Payloads are AES-256-GCM. Tests assert the stored form does not contain plaintext, and that another user cannot read a board (the RLS contract). Restricted boards refuse writes, including delete (Art. 18).
 ''',
@@ -120,6 +120,22 @@ Place is reversible: edit, delete (with cascade), and a Move handle that yields 
 Cloud passkeys call Supabase Auth WebAuthn plus the browser ceremony. The in-memory studio still fakes passkey, Google, GitHub, and magic link so CI never needs secrets. The DEK wrap for passkeys remains the twelve-word phrase; WebAuthn PRF is still future work.
 
 The plan is `docs/roadmap.md`. Issues #6–#13 are the board. This chapter is the retrospective, not a promise of work still undone.
+''',
+    ),
+    StoryChapter(
+      id: '10',
+      title: 'Unlock, rights, and canvas honesty',
+      control: 'GDPR Arts. 7 / 16 / 20 / EN 301 549',
+      body: '''
+Weeks 5–8 shipped what the legal copy already owed.
+
+A recovery phrase is not only shown once: it re-unlocks a remembered session without wiping wrap material. Echo consent is latest-wins; Privacy can withdraw it (Art. 7(3)) and the next Summon asks again. Password accounts can add a passkey from Privacy. Display name is Art. 16; export is a downloadable JSON file as well as a clipboard copy (Art. 20).
+
+The canvas file split into Atelier, Compose, and Index without changing the ritual. Index rows take keyboard focus; InteractiveViewer is still not a spatial map, and we do not claim full EAA conformance.
+
+What stayed fake on purpose: in-memory Google, GitHub, magic link, and passkey ceremonies so CI never needs secrets. WebAuthn PRF wrapping is still future work. Cloud register-passkey is a real browser ceremony against Frankfurt Auth.
+
+The product version is 1.2.0. The operator notes are `docs/ops.md`.
 ''',
     ),
   ];

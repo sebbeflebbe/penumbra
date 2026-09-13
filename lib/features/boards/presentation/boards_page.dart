@@ -72,30 +72,11 @@ class _BoardsBodyState extends ConsumerState<_BoardsBody> {
   }
 
   Future<void> _rename(Board board) async {
-    final controller = TextEditingController(text: board.title);
     final next = await showFDialog<String>(
       context: context,
-      builder: (context, style, animation) => FDialog(
-        animation: animation,
-        title: const Text('Rename this board'),
-        body: FTextField(
-          label: const Text('Title'),
-          control: FTextFieldControl.managed(controller: controller),
-        ),
-        actions: [
-          FButton(
-            onPress: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save title'),
-          ),
-          FButton(
-            variant: FButtonVariant.outline,
-            onPress: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
+      builder: (context, style, animation) =>
+          _RenameBoardDialog(animation: animation, initial: board.title),
     );
-    controller.dispose();
     if (!mounted || next == null || next.isEmpty || next == board.title) return;
     final result = await ref
         .read(boardRepositoryProvider)
@@ -244,6 +225,49 @@ class _BoardsBodyState extends ConsumerState<_BoardsBody> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RenameBoardDialog extends StatefulWidget {
+  const _RenameBoardDialog({required this.animation, required this.initial});
+
+  final Animation<double> animation;
+  final String initial;
+
+  @override
+  State<_RenameBoardDialog> createState() => _RenameBoardDialogState();
+}
+
+class _RenameBoardDialogState extends State<_RenameBoardDialog> {
+  late final _title = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FDialog(
+      animation: widget.animation,
+      title: const Text('Rename this board'),
+      body: FTextField(
+        label: const Text('Title'),
+        control: FTextFieldControl.managed(controller: _title),
+      ),
+      actions: [
+        FButton(
+          onPress: () => Navigator.of(context).pop(_title.text.trim()),
+          child: const Text('Save title'),
+        ),
+        FButton(
+          variant: FButtonVariant.outline,
+          onPress: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
     );
   }
 }

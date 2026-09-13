@@ -123,6 +123,73 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
     _setCurrent(user.copyWith(needsRecoveryPhraseReveal: false));
   }
 
+  void debugLockSession() {
+    final user = _current;
+    if (user == null) return;
+    _sessionDek = null;
+    final account = _accounts[user.id];
+    if (account == null) return;
+    _setCurrent(_toUser(account));
+  }
+
+  @override
+  Future<Result<AuthUser, AuthFailure>> unlockWithRecoveryPhrase(
+    String phrase,
+  ) async {
+    final user = _current;
+    if (user == null) {
+      return const Err(AuthUnavailableFailure('Sign in first.'));
+    }
+    final account = _accounts[user.id];
+    if (account == null) {
+      return const Err(AuthUnavailableFailure('Sign in first.'));
+    }
+    final parsed = RecoveryPhrase.parse(phrase: phrase, wordlist: _wordlist);
+    switch (parsed) {
+      case Err():
+        return const Err(
+          InvalidCredentialsFailure('That recovery phrase was not accepted.'),
+        );
+      case Ok(:final value):
+        final wrapping = await _derivation.deriveWrappingKey(
+          secret: value.display,
+          salt: account.wrapSalt,
+        );
+        final wrapKey = wrapping.okOrNull;
+        if (wrapKey == null) {
+          return const Err(
+            InvalidCredentialsFailure('That recovery phrase was not accepted.'),
+          );
+        }
+        final dek = (await _cipher.decrypt(
+          dekBytes: wrapKey,
+          ciphertext: account.wrappedDek,
+        )).okOrNull;
+        if (dek == null) {
+          return const Err(
+            InvalidCredentialsFailure('That recovery phrase was not accepted.'),
+          );
+        }
+        _sessionDek = dek;
+        account.dek = dek;
+        final unlocked = _toUser(account);
+        _setCurrent(unlocked);
+        return Ok(unlocked);
+    }
+  }
+
+  @override
+  Future<Result<void, AppFailure>> updateDisplayName(String? name) async {
+    final user = _requireUser();
+    if (user == null) return const Err(UnauthenticatedFailure());
+    final account = _accounts[user.id];
+    if (account == null) return const Err(UnauthenticatedFailure());
+    final trimmed = name?.trim();
+    account.displayName = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    _setCurrent(_toUser(account));
+    return const Ok(null);
+  }
+
   @override
   Future<Result<AuthUser, AuthFailure>> signInWithPassword({
     required String email,
@@ -806,6 +873,7 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
       methods: {...account.methods},
       needsRecoveryPhraseReveal:
           reveal && account.pendingRecoveryPhrase != null,
+      needsPhraseUnlock: _sessionDek == null && account.passwordHash == null,
     );
   }
 

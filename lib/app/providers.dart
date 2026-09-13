@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config.dart';
 import '../core/result.dart';
+import '../core/web/download.dart';
 import '../features/auth/domain/auth_models.dart';
 import '../features/boards/domain/board_repository.dart';
 import '../features/canvas/domain/canvas_repository.dart';
@@ -38,6 +39,12 @@ final privacyRepositoryProvider = Provider<PrivacyRepository>(
   (ref) => ref.watch(studioProvider),
 );
 
+final exportDownloaderProvider = Provider<ExportDownloader>(
+  (ref) =>
+      (filename, json) =>
+          downloadExportJson(filename: filename, contents: json),
+);
+
 final echoPromptProvider = Provider<String>((ref) => kPenumbraEchoSystemPrompt);
 
 final echoComposerProvider = Provider<EchoComposer>((ref) {
@@ -69,6 +76,10 @@ class AuthController extends StateNotifier<AsyncValue<AuthUser?>> {
   Future<AuthFailure?> github() => _unwrap(_auth.signInWithGitHub());
   Future<AuthFailure?> passkey() => _unwrap(_auth.signInWithPasskey());
   Future<AuthFailure?> demo() => _unwrap(_auth.enterDemoStudio());
+  Future<AuthFailure?> unlockPhrase(String phrase) =>
+      _unwrap(_auth.unlockWithRecoveryPhrase(phrase));
+  Future<AuthFailure?> registerPasskey() async =>
+      (await _auth.registerPasskey()).errOrNull;
 
   Future<void> signOut() => _auth.signOut();
 

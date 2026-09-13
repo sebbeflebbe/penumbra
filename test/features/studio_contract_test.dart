@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penumbra/core/errors.dart';
 import 'package:penumbra/features/auth/domain/auth_models.dart';
@@ -250,5 +251,102 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('phrase unlock restores decryption after the session DEK is dropped', () async {
+    await studio.signInWithGitHub();
+    final phrase = studio.pendingRecoveryPhrase!;
+    studio.acknowledgeRecoveryPhrase();
+    final board = (await boards.create(title: 'Keep')).okOrNull!;
+    final node = BoardNode(
+      id: const Uuid().v4(),
+      boardId: board.id,
+      x: 8,
+      y: 8,
+      kind: NodeKind.text,
+      text: 'secret-note',
+    );
+    expect((await canvas.upsert(node)).isOk, isTrue);
+    studio.debugLockSession();
+    expect(studio.current?.needsPhraseUnlock, isTrue);
+    expect((await canvas.listNodes(board.id)).isErr, isTrue);
+    expect(
+      (await studio.unlockWithRecoveryPhrase('not-twelve-words')).errOrNull,
+      isA<InvalidCredentialsFailure>(),
+    );
+    expect(studio.sessionDek, isNull);
+    expect((await studio.unlockWithRecoveryPhrase(phrase)).isOk, isTrue);
+    expect(studio.current?.needsPhraseUnlock, isFalse);
+    expect(
+      (await canvas.listNodes(board.id)).okOrNull!.single.text,
+      'secret-note',
+    );
+  });
+
+  test('remote echo consent latest-wins after withdraw', () async {
+    await studio.signUpWithPassword(
+      email: 'ada@penumbra.studio',
+      password: 'long-enough-1',
+    );
+    var now = DateTime.utc(2026, 9, 13, 12);
+    Future<void> grant(bool granted) async {
+      await withClock(Clock.fixed(now), () async {
+        expect(
+          (await studio.recordConsent(
+            ConsentKind.remoteEcho,
+            granted: granted,
+          )).isOk,
+          isTrue,
+        );
+      });
+      now = now.add(const Duration(seconds: 1));
+    }
+
+    await grant(true);
+    await grant(false);
+    expect(
+      hasGrantedConsent(
+        (await studio.consents()).okOrNull!,
+        ConsentKind.remoteEcho,
+      ),
+      isFalse,
+    );
+    await grant(true);
+    expect(
+      hasGrantedConsent(
+        (await studio.consents()).okOrNull!,
+        ConsentKind.remoteEcho,
+      ),
+      isTrue,
+    );
+    final exported = (await studio.exportMine()).okOrNull!;
+    expect(
+      exported.consents.where((row) => row['kind'] == 'remoteEcho').length,
+      3,
+    );
+  });
+
+  test('registerPasskey requires a session and adds the method', () async {
+    expect((await studio.registerPasskey()).isErr, isTrue);
+    await studio.signUpWithPassword(
+      email: 'ada@penumbra.studio',
+      password: 'long-enough-1',
+    );
+    expect((await studio.registerPasskey()).isOk, isTrue);
+    expect(studio.current?.methods, contains(AuthMethod.passkey));
+  });
+
+  test('updateDisplayName is included in the export', () async {
+    await studio.signUpWithPassword(
+      email: 'ada@penumbra.studio',
+      password: 'long-enough-1',
+    );
+    expect((await studio.updateDisplayName('Ada Lovelace')).isOk, isTrue);
+    expect(
+      (await studio.exportMine()).okOrNull!.profile['displayName'],
+      'Ada Lovelace',
+    );
+    expect((await studio.updateDisplayName('  ')).isOk, isTrue);
+    expect((await studio.exportMine()).okOrNull!.profile['displayName'], isNull);
   });
 }

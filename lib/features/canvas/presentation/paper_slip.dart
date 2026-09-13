@@ -43,6 +43,7 @@ class _PaperSlipState extends State<PaperSlip> {
   late final TextEditingController _edit = TextEditingController(
     text: widget.node.text ?? '',
   );
+  final _moveFocus = FocusNode(debugLabel: 'Move this note');
 
   @override
   void didUpdateWidget(covariant PaperSlip oldWidget) {
@@ -56,6 +57,7 @@ class _PaperSlipState extends State<PaperSlip> {
   @override
   void dispose() {
     _edit.dispose();
+    _moveFocus.dispose();
     super.dispose();
   }
 
@@ -263,20 +265,29 @@ class _PaperSlipState extends State<PaperSlip> {
     return Semantics(
       button: true,
       label: 'Move this note',
-      child: GestureDetector(
-        onPanStart: (_) => widget.onDragStart?.call(),
-        onPanUpdate: (details) => widget.onDrag?.call(details.delta),
-        onPanEnd: (_) => widget.onDragEnd?.call(),
-        onPanCancel: () => widget.onDragEnd?.call(),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Move',
-              style: theme.typography.xs.copyWith(
-                color: theme.colors.primary,
-                letterSpacing: 0.6,
+      child: Focus(
+        focusNode: _moveFocus,
+        child: GestureDetector(
+          onPanStart: (_) => widget.onDragStart?.call(),
+          onPanUpdate: (details) => widget.onDrag?.call(details.delta),
+          onPanEnd: (_) {
+            widget.onDragEnd?.call();
+            _moveFocus.requestFocus();
+          },
+          onPanCancel: () {
+            widget.onDragEnd?.call();
+            _moveFocus.requestFocus();
+          },
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Move',
+                style: theme.typography.xs.copyWith(
+                  color: theme.colors.primary,
+                  letterSpacing: 0.6,
+                ),
               ),
             ),
           ),

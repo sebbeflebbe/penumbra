@@ -91,6 +91,88 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   }
 
   @override
+  Future<Result<AuthUser, AuthFailure>> unlockWithRecoveryPhrase(
+    String phrase,
+  ) async {
+    final session = _client.auth.currentSession;
+    final remote = session?.user;
+    if (remote == null) {
+      return const Err(AuthUnavailableFailure('Sign in first.'));
+    }
+    final parsed = RecoveryPhrase.parse(phrase: phrase, wordlist: _wordlist);
+    switch (parsed) {
+      case Err():
+        return const Err(
+          InvalidCredentialsFailure('That recovery phrase was not accepted.'),
+        );
+      case Ok(:final value):
+        Map<String, dynamic>? profile;
+        try {
+          profile = await _client
+              .from('profiles')
+              .select()
+              .eq('id', remote.id)
+              .maybeSingle();
+        } on Object {
+          profile = null;
+        }
+        final saltRaw = profile?['wrap_salt'] as String?;
+        final wrappedRaw = profile?['wrapped_dek'] as String?;
+        if (saltRaw == null || wrappedRaw == null) {
+          return const Err(
+            InvalidCredentialsFailure('That recovery phrase was not accepted.'),
+          );
+        }
+        final dek = await _unwrapDek(
+          secret: value.display,
+          saltRaw: saltRaw,
+          wrappedRaw: wrappedRaw,
+        );
+        if (dek == null) {
+          return const Err(
+            InvalidCredentialsFailure('That recovery phrase was not accepted.'),
+          );
+        }
+        _sessionDek = dek;
+        await _rememberDevice(remote.id, dek);
+        final unlocked = _toUser(remote, reveal: false);
+        _setCurrent(unlocked);
+        return Ok(unlocked);
+    }
+  }
+
+  @override
+  Future<Result<void, AppFailure>> updateDisplayName(String? name) async {
+    final user = _current;
+    if (user == null) return const Err(UnauthenticatedFailure());
+    final trimmed = name?.trim();
+    final stored = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    try {
+      await _client
+          .from('profiles')
+          .update({'display_name': stored})
+          .eq('id', user.id);
+      final remote = _client.auth.currentUser;
+      if (remote != null) {
+        final next = _toUser(remote, reveal: false);
+        _setCurrent(
+          AuthUser(
+            id: next.id,
+            email: next.email,
+            displayName: stored,
+            methods: next.methods,
+            needsRecoveryPhraseReveal: next.needsRecoveryPhraseReveal,
+            needsPhraseUnlock: next.needsPhraseUnlock,
+          ),
+        );
+      }
+      return const Ok(null);
+    } on Object catch (error) {
+      return Err(_mapPostgrest(error));
+    }
+  }
+
+  @override
   Future<Result<AuthUser, AuthFailure>> signInWithPassword({
     required String email,
     required String password,
@@ -894,7 +976,7 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
 
     if (dek == null) {
       _sessionDek = null;
-      _setCurrent(_toUser(remote, reveal: false));
+      _setCurrent(_toUser(remote, reveal: false, locked: true));
       return;
     }
 
@@ -1019,7 +1101,7 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     }
   }
 
-  AuthUser _toUser(User user, {required bool reveal}) {
+  AuthUser _toUser(User user, {required bool reveal, bool locked = false}) {
     return AuthUser(
       id: user.id,
       email: user.email,
@@ -1028,6 +1110,7 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
           user.userMetadata?['name'] as String?,
       methods: _methods(user),
       needsRecoveryPhraseReveal: reveal && _pendingRecoveryPhrase != null,
+      needsPhraseUnlock: locked || _sessionDek == null,
     );
   }
 
