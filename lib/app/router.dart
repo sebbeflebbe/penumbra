@@ -24,7 +24,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final user = ref.read(authControllerProvider).value;
       final path = state.uri.path;
       final protected = path.startsWith('/boards') || path == '/privacy';
-      if (protected && user == null) return '/sign-in';
+      if (protected && user == null) {
+        return path == '/privacy' ? '/' : '/sign-in';
+      }
       if (path == '/sign-in' && user != null) return '/boards';
       return null;
     },

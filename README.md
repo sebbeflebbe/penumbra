@@ -39,4 +39,4 @@ Aligned, not certified: CRA secure-by-default + SBOM + coordinated disclosure; N
 
 ## Deploy (free)
 
-GitHub Actions builds `web`, scans `pubspec.lock` with OSV, writes a CycloneDX SBOM, and can deploy `build/web` to Cloudflare Pages. Set `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_PROJECT_NAME` to enable the deploy job.
+GitHub Actions builds `web`, scans `pubspec.lock` with OSV, writes a CycloneDX SBOM, and can deploy `build/web` to Cloudflare Pages. Set `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_PROJECT_NAME` to enable the deploy job. Operator origin and passkey notes: [`docs/ops.md`](docs/ops.md).

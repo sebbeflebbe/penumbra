@@ -103,5 +103,12 @@ ConsentEvent grantNecessary({required String id, required String userId}) {
 }
 
 bool hasGrantedConsent(List<ConsentEvent> events, ConsentKind kind) {
-  return events.any((event) => event.kind == kind && event.granted);
+  final matching = events.where((event) => event.kind == kind).toList()
+    ..sort((a, b) {
+      final byTime = a.at.compareTo(b.at);
+      if (byTime != 0) return byTime;
+      return a.id.compareTo(b.id);
+    });
+  if (matching.isEmpty) return false;
+  return matching.last.granted;
 }

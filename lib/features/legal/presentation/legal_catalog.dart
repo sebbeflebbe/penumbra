@@ -25,7 +25,7 @@ Lawful basis for the studio itself is contract (Art. 6(1)(b)). Summoning an echo
 
 We do not use marketing or analytics cookies. The only device storage is strictly necessary: session, theme, and key-wrapping material.
 
-You may access and port your data as JSON, restrict a board (Art. 18), and erase your account after re-authentication (Art. 17). We aim to complete rights requests within 30 days.
+You may access and port your data as a JSON file (Art. 15 / 20), copy that export, or download it. You may rectify your display name (Art. 16), restrict a board (Art. 18), and erase your account after re-authentication (Art. 17). Echo consent (Art. 6(1)(a)) can be withdrawn from Privacy as easily as it was given (Art. 7(3)); past consent records are kept. We aim to complete rights requests within 30 days.
 
 Processors, when a remote backend is configured: Supabase (Auth, Postgres, Storage) and Cloudflare Pages (static hosting). Google and GitHub act as independent controllers for OAuth identity. If you summon an echo with a configured Gemini key, Google LLC is also a processor for that one slip.
 
@@ -67,9 +67,9 @@ No commercial register. No VAT. Personal interview project.
     body: '''
 The European Accessibility Act applies from 28 June 2025. We design Penumbra against EN 301 549 v3.2.1 (web chapter = WCAG 2.1 Level AA). A personal notebook is likely outside the Act’s sectoral scope. We still treat the standard as the bar and do not claim full EAA conformance.
 
-Implemented: skip-to-content focuses a main landmark, visible focus rings via Forui, named and persisted appearance (System, Light, Dark, High contrast), true black/white high-contrast, reduced-motion no-ops (WCAG 2.2.3), named canvas cards, a list alternative to the spatial canvas, named Edit / Delete / Move / Restrict / Unrestrict controls, 48px-class targets on primary actions, Flutter web semantics enabled on startup.
+Implemented: skip-to-content focuses a main landmark, visible focus rings via Forui, named and persisted appearance (System, Light, Dark, High contrast), true black/white high-contrast, reduced-motion no-ops (WCAG 2.2.3), named canvas cards, a list alternative to the spatial canvas with focusable Index rows and Up/Down roving, named Edit / Delete / Move / Restrict / Unrestrict controls, 48px-class targets on primary actions, Flutter web semantics enabled on startup.
 
-Known gaps: Flutter web paints to a canvas, so the accessibility tree is an opt-in overlay. InteractiveViewer is not itself a spatial map in that tree — the Index and the Move handle are the mitigation. Contrast of third-party Forui defaults is AA in high-contrast mode by construction; the zinc theme helper text is darkened relative to the paper ground but is not a formal laboratory measurement. This statement is dated 5 September 2026.
+Known gaps: Flutter web paints to a canvas, so the accessibility tree is an opt-in overlay. InteractiveViewer is not itself a spatial map in that tree — the Index and the Move handle are the mitigation. Contrast of third-party Forui defaults is AA in high-contrast mode by construction; the zinc theme helper text is darkened relative to the paper ground but is not a formal laboratory measurement. This statement is dated 13 September 2026.
 
 Contact: the controller email on the privacy page.
 ''',

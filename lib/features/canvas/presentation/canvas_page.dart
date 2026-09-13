@@ -5,14 +5,16 @@ import 'package:forui/forui.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../app/providers.dart';
-import '../../../app/theme.dart';
 import '../../../core/a11y/motion.dart';
 import '../../../shared/widgets/chrome.dart';
+import '../../auth/presentation/locked_studio.dart';
 import '../../boards/domain/board.dart';
 import '../../boards/domain/echo_pairing.dart';
 import '../../boards/domain/node_motion.dart';
 import '../../privacy/domain/privacy_models.dart';
-import 'paper_slip.dart';
+import 'atelier.dart';
+import 'card_index.dart';
+import 'compose_bar.dart';
 
 class CanvasPage extends ConsumerStatefulWidget {
   const CanvasPage({required this.boardId, super.key});
@@ -64,10 +66,14 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
     final board = await boards.getById(widget.boardId);
     final nodes = await canvas.listNodes(widget.boardId);
     final consents = await ref.read(privacyRepositoryProvider).consents();
+    final locked =
+        ref.read(authRepositoryProvider).current?.needsPhraseUnlock ?? false;
     if (!mounted) return;
     setState(() {
       _board = board.okOrNull;
-      _error = board.errOrNull?.message ?? nodes.errOrNull?.message;
+      _error =
+          board.errOrNull?.message ??
+          (locked ? null : nodes.errOrNull?.message);
       _nodes = nodes.okOrNull ?? [];
       _echoConsented = hasGrantedConsent(
         consents.okOrNull ?? const [],
@@ -213,6 +219,11 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
       announce(context, error!);
       return;
     }
+    final moved = next.firstWhere((item) => item.id == id);
+    announce(
+      context,
+      'Moved. Card ${EchoPairing.numeral(EchoPairing.conversation(_nodes), moved)}.',
+    );
     await _untangleEchoes();
   }
 
@@ -430,7 +441,11 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
       announce(context, error!);
       return;
     }
-    announce(context, 'Moved');
+    final numeral = EchoPairing.numeral(
+      EchoPairing.conversation(_nodes),
+      node.first,
+    );
+    announce(context, 'Moved. Card $numeral.');
     await _untangleEchoes();
   }
 
@@ -441,8 +456,14 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(authControllerProvider);
+    final user = ref.watch(authControllerProvider).value;
     final phrase = ref.watch(authRepositoryProvider).pendingRecoveryPhrase;
+    if (user?.needsPhraseUnlock == true) {
+      return PenumbraChrome(
+        title: _board?.title,
+        child: LockedStudio(onUnlocked: _load),
+      );
+    }
     if (_error != null) {
       return PenumbraChrome(
         child: PenumbraPage(
@@ -457,25 +478,26 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
       return const PenumbraChrome(child: Center(child: FCircularProgress()));
     }
 
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
-            _nudge(-16, 0),
-        const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
-            _nudge(16, 0),
-        const SingleActivator(LogicalKeyboardKey.arrowUp): () => _nudge(0, -16),
-        const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-            _nudge(0, 16),
-      },
-      child: Focus(
-        autofocus: true,
-        child: PenumbraChrome(
-          title: _board!.title,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final stacked = constraints.maxWidth < 780;
-              final conversation = EchoPairing.conversation(_nodes);
-              final studioSheet = _Atelier(
+    return PenumbraChrome(
+      title: _board!.title,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked = constraints.maxWidth < 780;
+          final conversation = EchoPairing.conversation(_nodes);
+          final studioSheet = CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+                  _nudge(-16, 0),
+              const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+                  _nudge(16, 0),
+              const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                  _nudge(0, -16),
+              const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                  _nudge(0, 16),
+            },
+            child: Focus(
+              autofocus: true,
+              child: Atelier(
                 board: _board!,
                 nodes: _nodes,
                 conversation: conversation,
@@ -513,7 +535,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
                         );
                       }),
                 onDragEnd: _restricted ? null : _commitDrag,
-                toolbar: _ComposeBar(
+                toolbar: ComposeBar(
                   controller: _note,
                   enabled: !_restricted,
                   onPlace: _addNote,
@@ -521,34 +543,34 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
                   onSummon: !_restricted && _canSummon ? _summonEcho : null,
                   summoning: _summoning,
                 ),
-              );
-              final index = _CardIndex(
-                conversation: conversation,
-                focusedId: _selected?.id,
-                stacked: stacked,
-                onSelect: (id) => setState(() {
-                  final i = _nodes.indexWhere((n) => n.id == id);
-                  if (i >= 0) _focusedIndex = i;
-                }),
-              );
-              if (stacked) {
-                return Column(
-                  children: [
-                    Expanded(child: studioSheet),
-                    SizedBox(height: 240, child: index),
-                  ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: studioSheet),
-                  SizedBox(width: 252, child: index),
-                ],
-              );
-            },
-          ),
-        ),
+              ),
+            ),
+          );
+          final index = CardIndex(
+            conversation: conversation,
+            focusedId: _selected?.id,
+            stacked: stacked,
+            onSelect: (id) => setState(() {
+              final i = _nodes.indexWhere((n) => n.id == id);
+              if (i >= 0) _focusedIndex = i;
+            }),
+          );
+          if (stacked) {
+            return Column(
+              children: [
+                Expanded(child: studioSheet),
+                SizedBox(height: 240, child: index),
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: studioSheet),
+              SizedBox(width: 252, child: index),
+            ],
+          );
+        },
       ),
     );
   }
@@ -559,672 +581,4 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
     if (!first) return child;
     return child.penumbraCardAppear(context);
   }
-}
-
-List<BoardNode> _paintOrder(
-  List<BoardNode> nodes,
-  List<BoardNode> conversation,
-  String? focusedId,
-) {
-  final humans = [
-    for (final node in conversation)
-      if (node.kind != NodeKind.echo) node,
-  ];
-  final echoes = [
-    for (final node in conversation)
-      if (node.kind == NodeKind.echo) node,
-  ];
-  final ordered = [...humans, ...echoes];
-  if (focusedId == null) return ordered;
-  return [
-    for (final node in ordered)
-      if (node.id != focusedId) node,
-    for (final node in nodes)
-      if (node.id == focusedId) node,
-  ];
-}
-
-class _Atelier extends StatelessWidget {
-  const _Atelier({
-    required this.board,
-    required this.nodes,
-    required this.conversation,
-    required this.focusedId,
-    required this.highContrast,
-    required this.phrase,
-    required this.summonError,
-    required this.panEnabled,
-    required this.appear,
-    required this.onFocus,
-    required this.onDismissEcho,
-    required this.onAcknowledgePhrase,
-    required this.onSaveText,
-    required this.onDelete,
-    required this.onDragStart,
-    required this.onDrag,
-    required this.onDragEnd,
-    required this.toolbar,
-  });
-
-  final Board board;
-  final List<BoardNode> nodes;
-  final List<BoardNode> conversation;
-  final String? focusedId;
-  final bool highContrast;
-  final String? phrase;
-  final String? summonError;
-  final bool panEnabled;
-  final Widget Function(String id, Widget child) appear;
-  final ValueChanged<String> onFocus;
-  final ValueChanged<String>? onDismissEcho;
-  final VoidCallback onAcknowledgePhrase;
-  final void Function(BoardNode node, String text)? onSaveText;
-  final ValueChanged<BoardNode>? onDelete;
-  final ValueChanged<String>? onDragStart;
-  final void Function(String id, Offset delta)? onDrag;
-  final ValueChanged<String>? onDragEnd;
-  final Widget toolbar;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    final well = Color.lerp(
-      theme.colors.background,
-      theme.colors.foreground,
-      0.04,
-    )!;
-    return ColoredBox(
-      color: well,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (phrase != null) ...[
-              FAlert(
-                title: const Text('Save this recovery phrase'),
-                subtitle: Text(
-                  '$phrase\nOAuth and passkey accounts wrap your key with this phrase. We cannot recover it.',
-                ),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FButton(
-                  onPress: onAcknowledgePhrase,
-                  child: const Text('I have saved this phrase'),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (board.restricted) ...[
-              const FAlert(
-                title: Text('This board is restricted (Art. 18).'),
-                subtitle: Text(
-                  'Place, edit, delete, and move are paused until you unrestrict it.',
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (summonError != null) ...[
-              FAlert(
-                variant: FAlertVariant.destructive,
-                title: Text(summonError!),
-              ),
-              const SizedBox(height: 12),
-            ],
-            _RunningHead(title: board.title, count: nodes.length),
-            const SizedBox(height: 12),
-            Expanded(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: theme.colors.card,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: theme.colors.border),
-                  boxShadow: highContrast
-                      ? const []
-                      : [
-                          BoxShadow(
-                            color: theme.colors.foreground.withValues(
-                              alpha: 0.18,
-                            ),
-                            blurRadius: 40,
-                            offset: const Offset(0, 18),
-                          ),
-                          BoxShadow(
-                            color: theme.colors.foreground.withValues(
-                              alpha: 0.06,
-                            ),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: InteractiveViewer(
-                    panEnabled: panEnabled,
-                    constrained: false,
-                    minScale: 0.5,
-                    maxScale: 2.5,
-                    child: SizedBox(
-                      width: 1600,
-                      height: 1200,
-                      child: CustomPaint(
-                        painter: _SheetPainter(
-                          ink: theme.colors.foreground,
-                          rule: theme.colors.border,
-                          copper: theme.colors.primary,
-                          paper: theme.colors.card,
-                          highContrast: highContrast,
-                        ),
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                child: CustomPaint(
-                                  painter: _EchoHairlinePainter(
-                                    nodes: nodes,
-                                    copper: theme.colors.primary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            for (final node in _paintOrder(
-                              nodes,
-                              conversation,
-                              focusedId,
-                            ))
-                              Positioned(
-                                left: node.x,
-                                top: node.y,
-                                child: appear(
-                                  node.id,
-                                  PaperSlip(
-                                    node: node,
-                                    numeral: EchoPairing.numeral(
-                                      conversation,
-                                      node,
-                                    ),
-                                    selected: node.id == focusedId,
-                                    highContrast: highContrast,
-                                    readOnly: board.restricted,
-                                    onFocus: () => onFocus(node.id),
-                                    onDismiss:
-                                        node.kind == NodeKind.echo &&
-                                            onDismissEcho != null
-                                        ? () => onDismissEcho!(node.id)
-                                        : null,
-                                    onSaveText: onSaveText == null
-                                        ? null
-                                        : (text) => onSaveText!(node, text),
-                                    onDelete: onDelete == null
-                                        ? null
-                                        : () => onDelete!(node),
-                                    onDragStart: onDragStart == null
-                                        ? null
-                                        : () => onDragStart!(node.id),
-                                    onDrag: onDrag == null
-                                        ? null
-                                        : (delta) => onDrag!(node.id, delta),
-                                    onDragEnd: onDragEnd == null
-                                        ? null
-                                        : () => onDragEnd!(node.id),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            toolbar,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RunningHead extends StatelessWidget {
-  const _RunningHead({required this.title, required this.count});
-
-  final String title;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: theme.typography.xl2.copyWith(
-                  fontFamily: PenumbraInk.displayFamily,
-                  fontWeight: FontWeight.w500,
-                  height: 1.1,
-                ),
-              ),
-            ),
-            Text(
-              count == 1 ? '1 card' : '$count cards',
-              style: theme.typography.xs.copyWith(
-                color: theme.colors.mutedForeground,
-                letterSpacing: 0.6,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: theme.colors.border)),
-          ),
-          child: const SizedBox(width: double.infinity, height: 1),
-        ),
-      ],
-    );
-  }
-}
-
-class _ComposeBar extends StatelessWidget {
-  const _ComposeBar({
-    required this.controller,
-    required this.onPlace,
-    required this.onSwatch,
-    required this.onSummon,
-    required this.summoning,
-    this.enabled = true,
-  });
-
-  final TextEditingController controller;
-  final VoidCallback onPlace;
-  final VoidCallback onSwatch;
-  final VoidCallback? onSummon;
-  final bool summoning;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 840),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.colors.background,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: theme.colors.border),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colors.foreground.withValues(alpha: 0.12),
-              blurRadius: 28,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final tight = constraints.maxWidth < 620;
-              final field = FTextField(
-                hint: 'A thought, privately held',
-                enabled: enabled,
-                control: FTextFieldControl.managed(controller: controller),
-              );
-              final actions = Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FButton(
-                    onPress: enabled ? onPlace : null,
-                    child: const Text('Place'),
-                  ),
-                  FButton(
-                    variant: FButtonVariant.outline,
-                    onPress: enabled ? onSwatch : null,
-                    child: const Text('Swatch'),
-                  ),
-                  if (onSummon != null || summoning)
-                    FButton(
-                      variant: FButtonVariant.outline,
-                      onPress: summoning || !enabled ? null : onSummon,
-                      prefix: summoning
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: FCircularProgress(),
-                            )
-                          : null,
-                      child: const Text('Summon an echo'),
-                    ),
-                ],
-              );
-              if (tight) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [field, const SizedBox(height: 8), actions],
-                );
-              }
-              return Row(
-                children: [
-                  Text(
-                    'Compose',
-                    style: theme.typography.xs.copyWith(
-                      fontFamily: PenumbraInk.displayFamily,
-                      color: theme.colors.mutedForeground,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: SizedBox(
-                      height: 28,
-                      child: VerticalDivider(
-                        width: 1,
-                        thickness: 1,
-                        color: theme.colors.border,
-                      ),
-                    ),
-                  ),
-                  Expanded(child: field),
-                  const SizedBox(width: 8),
-                  actions,
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CardIndex extends StatelessWidget {
-  const _CardIndex({
-    required this.conversation,
-    required this.focusedId,
-    required this.stacked,
-    required this.onSelect,
-  });
-
-  final List<BoardNode> conversation;
-  final String? focusedId;
-  final bool stacked;
-  final ValueChanged<String> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colors.background,
-        border: Border(
-          left: stacked
-              ? BorderSide.none
-              : BorderSide(color: theme.colors.border),
-          top: stacked
-              ? BorderSide(color: theme.colors.border)
-              : BorderSide.none,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 18, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Index',
-              style: theme.typography.lg.copyWith(
-                fontFamily: PenumbraInk.displayFamily,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'A conversation. Arrow keys or Move reposition the selected slip.',
-              style: theme.typography.xs.copyWith(
-                color: theme.colors.mutedForeground,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 8),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: theme.colors.border)),
-              ),
-              child: const SizedBox(width: double.infinity, height: 1),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView.builder(
-                itemCount: conversation.length,
-                itemBuilder: (context, index) {
-                  final node = conversation[index];
-                  final selected = node.id == focusedId;
-                  final numeral = EchoPairing.numeral(conversation, node);
-                  final echo = node.kind == NodeKind.echo;
-                  return Semantics(
-                    button: true,
-                    selected: selected,
-                    label: echo
-                        ? 'Echo of $numeral, ${node.semanticsLabel}'
-                        : 'Card $numeral of ${conversation.where((n) => n.kind != NodeKind.echo).length}, ${node.semanticsLabel}',
-                    child: GestureDetector(
-                      onTap: () => onSelect(node.id),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            left: BorderSide(
-                              color: selected
-                                  ? theme.colors.primary
-                                  : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            echo ? 28 : 12,
-                            12,
-                            8,
-                            12,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                numeral,
-                                style: theme.typography.xs.copyWith(
-                                  fontFamily: PenumbraInk.displayFamily,
-                                  fontStyle: echo
-                                      ? FontStyle.italic
-                                      : FontStyle.normal,
-                                  color: selected
-                                      ? theme.colors.primary
-                                      : theme.colors.mutedForeground,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                echo
-                                    ? (node.text ?? 'Echo')
-                                    : node.semanticsLabel,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.typography.sm.copyWith(
-                                  fontFamily: PenumbraInk.displayFamily,
-                                  fontStyle: echo
-                                      ? FontStyle.italic
-                                      : FontStyle.normal,
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EchoHairlinePainter extends CustomPainter {
-  const _EchoHairlinePainter({required this.nodes, required this.copper});
-
-  final List<BoardNode> nodes;
-  final Color copper;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = copper.withValues(alpha: 0.7)
-      ..strokeWidth = 1.1
-      ..style = PaintingStyle.stroke;
-    for (final echo in nodes) {
-      if (echo.kind != NodeKind.echo || echo.parentId == null) continue;
-      BoardNode? parent;
-      for (final node in nodes) {
-        if (node.id == echo.parentId) {
-          parent = node;
-          break;
-        }
-      }
-      if (parent == null) continue;
-      canvas.drawLine(
-        Offset(
-          parent.x + EchoPairing.slipWidth,
-          parent.y + EchoPairing.slipHeight * 0.45,
-        ),
-        Offset(echo.x, echo.y + 36),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _EchoHairlinePainter oldDelegate) =>
-      oldDelegate.nodes != nodes || oldDelegate.copper != copper;
-}
-
-class _SheetPainter extends CustomPainter {
-  const _SheetPainter({
-    required this.ink,
-    required this.rule,
-    required this.copper,
-    required this.paper,
-    required this.highContrast,
-  });
-
-  final Color ink;
-  final Color rule;
-  final Color copper;
-  final Color paper;
-  final bool highContrast;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = paper);
-
-    const inset = 36.0;
-    final plate = Rect.fromLTWH(
-      inset,
-      inset,
-      size.width - inset * 2,
-      size.height - inset * 2,
-    );
-    final rulePaint = Paint()
-      ..color = rule
-      ..strokeWidth = 1;
-
-    canvas.drawRect(
-      plate,
-      Paint()
-        ..color = rule
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8,
-    );
-
-    _crop(canvas, plate.topLeft, 1, 1, rulePaint);
-    _crop(canvas, plate.topRight, -1, 1, rulePaint);
-    _crop(canvas, plate.bottomLeft, 1, -1, rulePaint);
-    _crop(canvas, plate.bottomRight, -1, -1, rulePaint);
-
-    if (!highContrast) {
-      final eclipse = Offset(size.width * 0.72, size.height * 0.34);
-      canvas.drawCircle(
-        eclipse,
-        210,
-        Paint()
-          ..color = copper.withValues(alpha: 0.07)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2,
-      );
-      canvas.drawCircle(
-        eclipse + const Offset(54, 10),
-        210,
-        Paint()..color = ink.withValues(alpha: 0.045),
-      );
-
-      final line = Paint()
-        ..color = rule.withValues(alpha: 0.7)
-        ..strokeWidth = 0.6;
-      const step = 28.0;
-      for (var y = plate.top + 48; y < plate.bottom - 8; y += step) {
-        canvas.drawLine(
-          Offset(plate.left + 16, y),
-          Offset(plate.right - 16, y),
-          line,
-        );
-      }
-      final dots = Paint()..color = rule;
-      for (var x = plate.left + 16; x < plate.right - 8; x += step) {
-        for (var y = plate.top + 48; y < plate.bottom - 8; y += step) {
-          canvas.drawCircle(Offset(x, y), 0.7, dots);
-        }
-      }
-
-      final vignette = Rect.fromLTWH(0, 0, size.width, size.height);
-      canvas.drawRect(
-        vignette,
-        Paint()
-          ..shader = RadialGradient(
-            center: const Alignment(-0.15, -0.2),
-            radius: 1.05,
-            colors: [paper.withValues(alpha: 0), ink.withValues(alpha: 0.12)],
-          ).createShader(vignette),
-      );
-    }
-  }
-
-  void _crop(Canvas canvas, Offset corner, double dx, double dy, Paint paint) {
-    const arm = 14.0;
-    canvas.drawLine(corner, corner + Offset(dx * arm, 0), paint);
-    canvas.drawLine(corner, corner + Offset(0, dy * arm), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SheetPainter oldDelegate) =>
-      oldDelegate.ink != ink ||
-      oldDelegate.rule != rule ||
-      oldDelegate.copper != copper ||
-      oldDelegate.paper != paper ||
-      oldDelegate.highContrast != highContrast;
 }

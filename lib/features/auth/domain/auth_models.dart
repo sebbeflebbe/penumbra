@@ -9,6 +9,7 @@ class AuthUser {
     this.email,
     this.displayName,
     this.needsRecoveryPhraseReveal = false,
+    this.needsPhraseUnlock = false,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class AuthUser {
   final String? displayName;
   final Set<AuthMethod> methods;
   final bool needsRecoveryPhraseReveal;
+  final bool needsPhraseUnlock;
 
   AuthUser copyWith({
     String? id,
@@ -23,6 +25,7 @@ class AuthUser {
     String? displayName,
     Set<AuthMethod>? methods,
     bool? needsRecoveryPhraseReveal,
+    bool? needsPhraseUnlock,
   }) {
     return AuthUser(
       id: id ?? this.id,
@@ -31,6 +34,7 @@ class AuthUser {
       methods: methods ?? this.methods,
       needsRecoveryPhraseReveal:
           needsRecoveryPhraseReveal ?? this.needsRecoveryPhraseReveal,
+      needsPhraseUnlock: needsPhraseUnlock ?? this.needsPhraseUnlock,
     );
   }
 }
@@ -87,6 +91,10 @@ abstract class AuthRepository {
   Future<Result<void, AuthFailure>> signOut();
   Future<Result<void, AuthFailure>> reauthenticate({String? password});
   Future<Result<void, AuthFailure>> deleteAccount();
+
+  /// Unwrap the session DEK with the twelve-word phrase after the device wrap
+  /// is gone. Does not replace [needsRecoveryPhraseReveal].
+  Future<Result<AuthUser, AuthFailure>> unlockWithRecoveryPhrase(String phrase);
 
   /// Twelve-word phrase shown once for OAuth/passkey wrapping. Null otherwise.
   String? get pendingRecoveryPhrase;

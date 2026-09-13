@@ -10,4 +10,5 @@ abstract class PrivacyRepository {
   });
   Future<Result<PrivacyExport, AppFailure>> exportMine();
   Future<Result<void, AppFailure>> eraseAccount({String? password});
+  Future<Result<void, AppFailure>> updateDisplayName(String? name);
 }
