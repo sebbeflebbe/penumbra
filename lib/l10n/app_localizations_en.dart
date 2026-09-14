@@ -529,7 +529,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get legalIncompleteSv =>
-      'Fullständig svensk rättslig text för användarvillkor och impressum hävdas inte i den här versionen. Integritet och tillgänglighet finns på svenska.';
+      'Fullständig svensk text för användarvillkor och impressum (ansvarsuppgifter) finns inte i den här versionen. Integritet och tillgänglighet finns på svenska.';
 
   @override
   String get exportReady => 'Export ready. This is your Art. 15 / 20 copy.';

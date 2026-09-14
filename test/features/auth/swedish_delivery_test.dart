@@ -31,7 +31,8 @@ void main() {
     await tester.tap(find.text('Svenska'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Tillkomst'), findsOneWidget);
+    expect(find.text('Making of'), findsWidgets);
+    expect(find.text('Juridik'), findsOneWidget);
     expect(
       find.bySemanticsLabel('Språk: svenska. Byt till engelska.'),
       findsOneWidget,
@@ -56,6 +57,7 @@ void main() {
     await tester.tap(find.text('Logga in').first);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Stig in i halvskuggan.'), findsOneWidget);
     final bankId = tester.getTopLeft(find.text('Fortsätt med BankID'));
     final passkey = tester.getTopLeft(find.text('Fortsätt med en passnyckel'));
     expect(bankId.dy, lessThan(passkey.dy));

@@ -1043,7 +1043,7 @@ abstract class AppLocalizations {
   /// No description provided for @legalIncompleteSv.
   ///
   /// In en, this message translates to:
-  /// **'Fullständig svensk rättslig text för användarvillkor och impressum hävdas inte i den här versionen. Integritet och tillgänglighet finns på svenska.'**
+  /// **'Fullständig svensk text för användarvillkor och impressum (ansvarsuppgifter) finns inte i den här versionen. Integritet och tillgänglighet finns på svenska.'**
   String get legalIncompleteSv;
 
   /// No description provided for @exportReady.

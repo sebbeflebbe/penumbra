@@ -31,6 +31,7 @@ Issues:
 - https://github.com/sebbeflebbe/penumbra/issues/25 sv-SE / en locale as necessary storage
 - https://github.com/sebbeflebbe/penumbra/issues/26 BankID as an auth port (no personnummer)
 - https://github.com/sebbeflebbe/penumbra/issues/27 Privacy security events + DOS copy + chapter 11
+- https://github.com/sebbeflebbe/penumbra/issues/29 Swedish copy: grammar and structure
 
 Four-week spec (Weeks 5–8): [roadmap.md](roadmap.md). Versioning and GitHub Flow: [versioning.md](versioning.md).
 
