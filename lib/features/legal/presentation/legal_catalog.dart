@@ -97,7 +97,7 @@ Flutter web Content-Security-Policy cannot be as strict as a classic HTML app be
     body: '''
 Penumbra är en personlig visuell ateljé. Den som driver en given installation är personuppgiftsansvarig enligt GDPR.
 
-Vi behandlar kontoidentifierare, taveltitlar, krypterade kort, samtyckesposter och kortlivade säkerhetshändelser. Korttexter krypteras i webbläsaren med AES-256-GCM. Databasen är avsedd att ligga i EU (eu-central-1 Frankfurt) när ett Supabase-projekt kopplas. Vi lagrar inte personnummer. Om en framtida e-legitimation assertion innehåller ssn eller personalNumber slängs den innan persistens.
+Vi behandlar kontoidentifierare, taveltitlar, krypterade kort, samtyckesposter och kortlivade säkerhetshändelser. Korttexter krypteras i webbläsaren med AES-256-GCM. Databasen är avsedd att ligga i EU (eu-central-1 Frankfurt) när ett Supabase-projekt kopplas. Vi lagrar inte personnummer. Om ett framtida OIDC-intyg innehåller ssn eller personalNumber kastas de innan något sparas.
 
 Rättslig grund för ateljén är avtal (art. 6.1 b). Att kalla fram ett eko är valfritt: den texten kan skickas till Google LLC (Gemini 3.5 Flash-Lite) med samtycke (art. 6.1 a). Resten av tavlan skickas inte. Utan nyckel svarar en lokal röst och inget lämnar webbläsaren.
 
@@ -105,9 +105,9 @@ Vi använder inte marknadsförings- eller analyskakor. Endast nödvändig lagrin
 
 Du kan få ut dina data som JSON (art. 15 / 20), kopiera eller ladda ner. Du kan rätta visningsnamn (art. 16), begränsa en tavla (art. 18) och radera kontot efter ny autentisering (art. 17). Ekonsamtycke kan återkallas lika enkelt som det gavs (art. 7.3). Vi siktar på 30 dagar för rättighetsärenden.
 
-Personuppgiftsbiträden, när moln är konfigurerat: Supabase (Auth, Postgres, Storage) och Cloudflare Pages. Google och GitHub är självständiga personuppgiftsansvariga för OAuth-identitet. BankID-leverantören, när den är inkopplad, är identitetsutfärdare — inte en lagring av nationellt id hos oss.
+Personuppgiftsbiträden, när moln är konfigurerat: Supabase (Auth, Postgres, Storage) och Cloudflare Pages. Google och GitHub är självständiga personuppgiftsansvariga för OAuth-identitet. BankID-leverantören, när den är inkopplad, utfärdar identitet; vi lagrar inget personnummer.
 
-Överföringar: även med EU-databas är Supabase Inc. och Cloudflare, Inc. amerikanska bolag. Gemini är också en amerikansk residualrisk. Klientkryptering av kort är den primära skyddsåtgärden; ett eko i luften är klartext till Google. Vi påstår inte att residualrisken är noll. Det är den IMY-formade meningen.
+Överföringar: även med EU-databas är Supabase Inc. och Cloudflare, Inc. amerikanska bolag. Gemini är också en amerikansk residualrisk. Klientkryptering av kort är den primära skyddsåtgärden; ett eko i luften är klartext till Google. Vi påstår inte att residualrisken är noll.
 
 Den här texten är en arbetsversion för en intervjuinstallation. Byt personuppgiftsansvarig innan riktiga användare i EU bjuds in.
 ''',
@@ -117,11 +117,11 @@ Den här texten är en arbetsversion för en intervjuinstallation. Byt personupp
     title: 'Tillgänglighetsredogörelse',
     slug: 'accessibility',
     body: '''
-DOS 2018 (lagen om tillgänglighet till digital offentlig service) pekar på EN 301 549. Europeiska tillgänglighetsdirektivet (EAA) gäller från 28 juni 2025. Vi utformar Penumbra mot EN 301 549 v3.2.1 (webbkapitlet = WCAG 2.1 AA). Ett personligt anteckningsblock ligger troligen utanför direktivets sektorer. Vi behandlar ändå standarden som ribban och hävdar inte full EAA- eller DOS-överensstämmelse, och inte DIGG-godkännande.
+DOS 2018 (lagen om tillgänglighet till digital offentlig service) pekar på EN 301 549. Europeiska tillgänglighetsdirektivet (EAA) gäller från 28 juni 2025. Vi utformar Penumbra mot EN 301 549 v3.2.1 (webbkapitlet = WCAG 2.1 AA). Ett personligt anteckningsblock ligger troligen utanför direktivets sektorer. Vi behandlar ändå standarden som ribban. Vi hävdar varken full EAA- eller DOS-överensstämmelse eller DIGG-godkännande.
 
-Genomfört: hoppa till innehållet, synlig fokusring via Forui, namngivet och sparat utseende (System, Ljust, Mörkt, Hög kontrast), äkta svart/vitt högkontrast, reducerad rörelse som no-op (WCAG 2.2.3), namngivna kort, Index med fokus och Upp/Ner, namngiven Flytta, 48 px-klass på primära åtgärder, namngivet språkval (English / Svenska), Flutter-webbsemantik vid start.
+Genomfört: hoppa till innehållet, synlig fokusring via Forui, namngivet och sparat utseende (System, Ljust, Mörkt, Hög kontrast), äkta svart/vitt högkontrast, reducerad rörelse utan animation (WCAG 2.2.3), namngivna kort, Index med fokus och Upp/Ner, namngiven Flytta, 48 px-klass på primära åtgärder, namngivet språkval (English / Svenska), Flutter-webbsemantik vid start.
 
-Kända luckor: Flutter web ritar på en canvas, så tillgänglighetsträdet är ett tillval. InteractiveViewer är inte en rumslig karta i det trädet — Index och Flytta är åtgärden. Den här redogörelsen är daterad 14 september 2026.
+Kända luckor: Flutter web ritar på en canvas, så tillgänglighetsträdet är ett tillval. InteractiveViewer är inte en rumslig karta i det trädet — Index och Flytta är åtgärderna. Den här redogörelsen är partiell och daterad 14 september 2026.
 
 Kontakt: e-postadressen på integritetssidan.
 ''',

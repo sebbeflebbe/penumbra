@@ -249,7 +249,13 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                               }
                             },
                       prefix: _prefix('magic', const Icon(FLucideIcons.mail)),
-                      child: Text(l10n.emailMagicLink),
+                      child: Flexible(
+                        child: Text(
+                          l10n.emailMagicLink,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ).penumbraEnter(context, delayMs: 200),
                     const SizedBox(height: 8),
                     FButton(

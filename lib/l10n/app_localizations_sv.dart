@@ -27,7 +27,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get languageAnnouncedSwedish => 'Språk: svenska.';
 
   @override
-  String get navMakingOf => 'Tillkomst';
+  String get navMakingOf => 'Making of';
 
   @override
   String get navLegal => 'Juridik';
@@ -45,7 +45,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get navSignOut => 'Logga ut';
 
   @override
-  String get navHome => 'Penumbra hem';
+  String get navHome => 'Penumbra, startsida';
 
   @override
   String get navMenu => 'Öppna meny';
@@ -79,7 +79,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get appearanceHighContrast => 'Hög kontrast';
 
   @override
-  String get landingHeadline => 'En tyst ateljé för att tänka i rummet.';
+  String get landingHeadline => 'En tyst ateljé för rumsligt tänkande.';
 
   @override
   String get landingLede =>
@@ -89,7 +89,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get enterStudio => 'Gå in i ateljén';
 
   @override
-  String get readMakingOf => 'Läs tillkomsten';
+  String get readMakingOf => 'Läs Making of';
 
   @override
   String get factPrivateTitle => 'Privat som standard';
@@ -106,7 +106,7 @@ class AppLocalizationsSv extends AppLocalizations {
       'Duken har dokumentordning, namn och ett högkontrasttema.';
 
   @override
-  String get factLegalTitle => 'Juridiskt körbart';
+  String get factLegalTitle => 'Rättsligt gångbart';
 
   @override
   String get factLegalBody =>
@@ -125,7 +125,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get signInTitle => 'Logga in';
 
   @override
-  String get signInHeadline => 'Steg in i halvskuggan.';
+  String get signInHeadline => 'Stig in i halvskuggan.';
 
   @override
   String get signInLede =>
@@ -150,14 +150,15 @@ class AppLocalizationsSv extends AppLocalizations {
   String get emailRestoreHint => 'Används bara för att återställa ateljén.';
 
   @override
-  String get emailMagicLink => 'Maila mig en magisk länk';
+  String get emailMagicLink => 'Mejla mig en inloggningslänk';
 
   @override
   String get magicLinkDemo =>
-      'Magisk länk skickad (i den här demon öppnas sessionen direkt).';
+      'Inloggningslänk skickad (i den här demon öppnas sessionen direkt).';
 
   @override
-  String get magicLinkEmail => 'Kolla mejlen. Låt den här fliken vara öppen.';
+  String get magicLinkEmail =>
+      'Kontrollera e-posten. Låt den här fliken vara öppen.';
 
   @override
   String get hidePassword => 'Dölj lösenord';
@@ -285,7 +286,7 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get composeHint => 'En tanke, privat hållen';
+  String get composeHint => 'En tanke du håller privat';
 
   @override
   String get place => 'Placera';
@@ -330,7 +331,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get displayName => 'Visningsnamn';
 
   @override
-  String get displayNameHint => 'Art. 16 rättelse. Valfritt.';
+  String get displayNameHint => 'art. 16 rättelse. Valfritt.';
 
   @override
   String get saveDisplayName => 'Spara visningsnamn';
@@ -340,11 +341,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get passwordToEraseHint =>
-      'Art. 17 radering kräver en färsk lösenordsbekräftelse.';
+      'art. 17 radering kräver en färsk lösenordsbekräftelse.';
 
   @override
   String get oauthEraseHint =>
-      'BankID-, OAuth- och passnyckelkonton kan raderas bara med en inloggning från de senaste fem minuterna. Logga in igen om fönstret har stängt.';
+      'BankID-, OAuth- och passnyckelkonton kan raderas bara med en inloggning från de senaste fem minuterna. Logga in igen om mer än fem minuter har gått.';
 
   @override
   String get exportMyData => 'Exportera mina data';
@@ -375,7 +376,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get securityEventsHint =>
-      'Grov revisionsspårning. Inga korttexter, fraser eller personnummer.';
+      'Översiktlig händelselogg. Inga korttexter, fraser eller personnummer.';
 
   @override
   String get noSecurityEvents => 'Inga säkerhetshändelser på kontot ännu.';
@@ -385,7 +386,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get withdrawEchoBody =>
-      'Nästa fjärr-eko frågar igen. Kort som redan ligger kvar. Tidigare samtyckesrader raderas inte (art. 7.3).';
+      'Nästa fjärr-eko frågar igen. Kort som redan ligger på tavlan ligger kvar. Tidigare samtyckesrader raderas inte (art. 7.3).';
 
   @override
   String get withdrawConsent => 'Återkalla samtycke';
@@ -422,20 +423,20 @@ class AppLocalizationsSv extends AppLocalizations {
   String get echoPlaced => 'Ett eko lades intill.';
 
   @override
-  String get echoDismissed => 'Ekot avfärdat.';
+  String get echoDismissed => 'Ekot är avfärdat.';
 
   @override
-  String get noteSaved => 'Anteckningen sparad.';
+  String get noteSaved => 'Anteckningen är sparad.';
 
   @override
-  String get noteDeleted => 'Anteckningen borttagen.';
+  String get noteDeleted => 'Anteckningen är borttagen.';
 
   @override
-  String get phraseSaved => 'Återställningsfrasen sparad.';
+  String get phraseSaved => 'Återställningsfrasen är sparad.';
 
   @override
   String movedCard(String numeral) {
-    return 'Flyttad. Kort $numeral.';
+    return 'Flyttat. Kort $numeral.';
   }
 
   @override
@@ -453,7 +454,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get savePhraseBody =>
-      'BankID-, OAuth- och passnyckelkonton slår in nyckeln med den här frasen. Vi kan inte återskapa den.';
+      'BankID-, OAuth- och passnyckelkonton omsluter nyckeln med den här frasen. Vi kan inte återskapa den.';
 
   @override
   String get savedPhrase => 'Jag har sparat frasen';
@@ -515,45 +516,45 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get boardRenamed => 'Tavlan bytte namn.';
+  String get boardRenamed => 'Tavlan har bytt namn.';
 
   @override
   String get boardRestrictedAnnounce => 'Tavlan begränsad (art. 18).';
 
   @override
-  String get boardUnrestricted => 'Begränsningen hävd.';
+  String get boardUnrestricted => 'Begränsningen är hävd.';
 
   @override
   String get boardDeleted => 'Tavlan borttagen.';
 
   @override
   String get legalIncompleteSv =>
-      'Fullständig svensk rättslig text för användarvillkor och impressum hävdas inte i den här versionen. Integritet och tillgänglighet finns på svenska.';
+      'Fullständig svensk text för användarvillkor och impressum (ansvarsuppgifter) finns inte i den här versionen. Integritet och tillgänglighet finns på svenska.';
 
   @override
   String get exportReady =>
       'Exporten är klar. Det här är din kopia enligt art. 15 / 20.';
 
   @override
-  String get exportDownloaded => 'Exporten nedladdad.';
+  String get exportDownloaded => 'Exporten är nedladdad.';
 
   @override
-  String get exportCopied => 'Exporten kopierad till urklipp';
+  String get exportCopied => 'Exporten är kopierad till urklipp.';
 
   @override
-  String get displayNameSaved => 'Visningsnamnet sparat.';
+  String get displayNameSaved => 'Visningsnamnet är sparat.';
 
   @override
-  String get passkeyAdded => 'Passnyckel tillagd.';
+  String get passkeyAdded => 'Passnyckeln är tillagd.';
 
   @override
-  String get echoConsentWithdrawn => 'Ekonsamtycke återkallat.';
+  String get echoConsentWithdrawn => 'Ekonsamtycket är återkallat.';
 
   @override
   String get reenterPassword => 'Ange lösenordet igen för att radera kontot.';
 
   @override
-  String get accountErased => 'Kontot raderat.';
+  String get accountErased => 'Kontot är raderat.';
 
   @override
   String get catAccountName => 'Kontoidentifierare';
@@ -580,7 +581,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get catBoardRetention => 'Kontots livstid, därefter radering';
 
   @override
-  String get catNodesName => 'Krypterade tavlkort';
+  String get catNodesName => 'Krypterade tavelkort';
 
   @override
   String get catNodesPurpose =>
