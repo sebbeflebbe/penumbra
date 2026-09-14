@@ -2,7 +2,7 @@
 
 A privacy-first visual thinking studio. Private by default. Visible only to you. Accessible by design.
 
-This is a Flutter **web** app: an interview piece that treats encryption, EN 301 549 / EAA-minded accessibility, multi-method authentication, a real Supabase backend when configured, and European legal operations as product features. The making-of is a route (`/making-of`). Agent principles live in `AGENTS.md`. Development is tracked on GitHub Issues and a Project (`docs/github.md`), not inside the studio.
+This is a Flutter **web** app used as a **Swedish consultancy case**: fail-closed EU backend, BankID-shaped eID without storing personnummer, EN 301 549 / DOS-minded accessibility, and GDPR rights as UI. The notebook is the demo surface. The making-of is a route (`/making-of`). Talk sheet for a consultant-firm interview: [`docs/interview.md`](docs/interview.md). Agent principles live in `AGENTS.md`. Development is tracked on GitHub Issues and a Project (`docs/github.md`), not inside the studio.
 
 ## Run locally
 

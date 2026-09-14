@@ -41,7 +41,7 @@ We did not pull Google Fonts at runtime. Forui already ships Inter. Display type
       title: 'Auth',
       control: 'eIDAS 2 / GDPR Art. 32',
       body: '''
-Five methods: passkeys, Google, GitHub, magic link, password. Passkeys are first in the layout because they are phishing-resistant. On the cloud path they are real WebAuthn against Supabase Auth; the in-memory studio still fakes a passkey session so reviewers need no authenticator. Passwords are last and must be twelve characters. OAuth providers are independent controllers for their own identity data.
+Five methods in the first cycle: passkeys, Google, GitHub, magic link, password. Passkeys are first in the English layout because they are phishing-resistant. BankID joins the same port in chapter 11; Swedish layout leads with it. On the cloud path passkeys are real WebAuthn against Supabase Auth; the in-memory studio still fakes a passkey session so reviewers need no authenticator. Passwords are last and must be twelve characters. OAuth providers are independent controllers for their own identity data.
 
 OAuth users do not have a password to derive a wrapping key. They get a twelve-word recovery phrase once. That tradeoff is the honest part of the encryption story. WebAuthn PRF wrapping is still future work.
 ''',
@@ -136,6 +136,24 @@ The canvas file split into Atelier, Compose, and Index without changing the ritu
 What stayed fake on purpose: in-memory Google, GitHub, magic link, and passkey ceremonies so CI never needs secrets. WebAuthn PRF wrapping is still future work. Cloud register-passkey is a real browser ceremony against Frankfurt Auth.
 
 The product version is 1.2.0. The operator notes are `docs/ops.md`.
+''',
+    ),
+    StoryChapter(
+      id: '11',
+      title: 'Swedish delivery',
+      control: 'DOS 2018 / eIDAS / ADR-008',
+      body: '''
+This cycle is a consultancy case, not a notebook feature dump.
+
+Locale is a first-class preference: English and Swedish, persisted as necessary storage next to appearance. Product UI translates. Privacy and accessibility statements exist in Swedish; terms and imprint stay English with an honest line that full Swedish legal copy is not claimed complete. Making-of and ADRs stay English.
+
+BankID is a port. In-memory it is a fake success with a twelve-word wrap, like GitHub. Cloud it is both dart-defines or neither; unset is an unavailable sentence, not a password fallback. Assertions that look like a personnummer are dropped. Freja is future.
+
+Privacy lists security events — UTC time, type, coarse detail — and includes them in the Art. 20 JSON. No bodies, phrases, or national identity numbers.
+
+DOS 2018 sits next to EN 301 549 and the EAA in the accessibility statement. The claim is still partial. InteractiveViewer is still not a map. We do not claim DIGG-godkänd.
+
+The product version is 1.3.0. The talk sheet is `docs/interview.md`.
 ''',
     ),
   ];

@@ -32,6 +32,9 @@ Future<void> main() async {
   final savedAppearance = appearanceFromName(
     deviceStore.read(AppearanceController.storageKey),
   );
+  final savedLocale = localeFromName(
+    deviceStore.read(LocaleController.storageKey),
+  );
   var echoPrompt = kPenumbraEchoSystemPrompt;
   try {
     echoPrompt = await rootBundle.loadString(
@@ -47,6 +50,9 @@ Future<void> main() async {
     appearanceProvider.overrideWith(
       (ref) =>
           AppearanceController(store: deviceStore, initial: savedAppearance),
+    ),
+    localeProvider.overrideWith(
+      (ref) => LocaleController(store: deviceStore, initial: savedLocale),
     ),
   ];
 
@@ -67,6 +73,7 @@ Future<void> main() async {
         wordlist: wordlist.words,
         store: deviceStore,
         redirectTo: kIsWeb ? Uri.base.origin : config.productionOrigin,
+        eidMode: config.eidMode,
       );
       overrides.addAll([
         authRepositoryProvider.overrideWithValue(remote),

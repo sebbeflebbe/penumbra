@@ -25,6 +25,10 @@ Future<void> pumpStudio(
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+  tester.platformDispatcher.localeTestValue = const Locale('en');
+  tester.platformDispatcher.localesTestValue = const [Locale('en')];
+  addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+  addTearDown(tester.platformDispatcher.clearLocalesTestValue);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

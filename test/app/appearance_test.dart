@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penumbra/app/providers.dart';
 import 'package:penumbra/app/theme.dart';
@@ -25,5 +26,18 @@ void main() {
     controller.set(PenumbraAppearance.highContrast);
     await Future<void>.delayed(Duration.zero);
     expect(store.read(AppearanceController.storageKey), 'highContrast');
+  });
+
+  test('toggling locale persists to the device store', () async {
+    final store = MemoryDeviceStore();
+    final controller = LocaleController(store: store);
+    expect(controller.state.languageCode, 'en');
+    controller.toggle();
+    await Future<void>.delayed(Duration.zero);
+    expect(store.read(LocaleController.storageKey), 'sv');
+    expect(controller.state.languageCode, 'sv');
+    controller.set(const Locale('en'));
+    await Future<void>.delayed(Duration.zero);
+    expect(store.read(LocaleController.storageKey), 'en');
   });
 }

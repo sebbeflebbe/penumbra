@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../app/theme.dart';
 import '../../../core/a11y/motion.dart';
+import '../../../core/logging/security_log.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/chrome.dart';
 import '../../auth/domain/auth_models.dart';
 import '../domain/privacy_models.dart';
@@ -26,6 +28,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
   PrivacyExport? _export;
   var _echoGranted = false;
   var _passkeyBusy = false;
+  List<SecurityEvent> _events = const [];
   final _password = TextEditingController();
   final _displayName = TextEditingController();
 
@@ -45,14 +48,17 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
   }
 
   Future<void> _refreshConsents() async {
-    final result = await ref.read(privacyRepositoryProvider).consents();
+    final privacy = ref.read(privacyRepositoryProvider);
+    final consents = await privacy.consents();
+    final events = await privacy.securityEvents();
     if (!mounted) return;
-    result.when(
-      ok: (events) => setState(() {
-        _echoGranted = hasGrantedConsent(events, ConsentKind.remoteEcho);
+    consents.when(
+      ok: (items) => setState(() {
+        _echoGranted = hasGrantedConsent(items, ConsentKind.remoteEcho);
       }),
       err: (_) {},
     );
+    events.when(ok: (items) => setState(() => _events = items), err: (_) {});
   }
 
   Future<void> _exportData() async {
@@ -61,7 +67,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
       ok: (bundle) {
         setState(() {
           _export = bundle;
-          _status = 'Export ready. This is your Art. 15 / 20 copy.';
+          _status = AppLocalizations.of(context).exportReady;
           _error = null;
         });
       },
@@ -77,7 +83,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
       jsonEncode(bundle.toJson()),
     );
     if (!mounted) return;
-    announce(context, 'Export downloaded.');
+    announce(context, AppLocalizations.of(context).exportDownloaded);
   }
 
   Future<void> _saveDisplayName() async {
@@ -88,10 +94,10 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
     result.when(
       ok: (_) {
         setState(() {
-          _status = 'Display name saved.';
+          _status = AppLocalizations.of(context).displayNameSaved;
           _error = null;
         });
-        announce(context, 'Display name saved.');
+        announce(context, AppLocalizations.of(context).displayNameSaved);
       },
       err: (failure) => setState(() => _error = failure.message),
     );
@@ -111,35 +117,36 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
       if (failure != null) {
         _error = failure.message;
       } else {
-        _status = 'Passkey added.';
+        _status = AppLocalizations.of(context).passkeyAdded;
       }
     });
-    if (failure == null) announce(context, 'Passkey added.');
+    if (failure == null)
+      announce(context, AppLocalizations.of(context).passkeyAdded);
   }
 
   Future<void> _withdrawEcho() async {
     final confirmed = await showFDialog<bool>(
       context: context,
-      builder: (context, style, animation) => FDialog(
-        animation: animation,
-        title: const Text('Withdraw echo consent'),
-        body: const Text(
-          'Future remote echoes will ask again. Notes already on the board stay. '
-          'This does not erase past consent records (Art. 7(3)).',
-        ),
-        actions: [
-          FButton(
-            variant: FButtonVariant.destructive,
-            onPress: () => Navigator.of(context).pop(true),
-            child: const Text('Withdraw consent'),
-          ),
-          FButton(
-            variant: FButtonVariant.outline,
-            onPress: () => Navigator.of(context).pop(false),
-            child: const Text('Keep consent'),
-          ),
-        ],
-      ),
+      builder: (context, style, animation) {
+        final l10n = AppLocalizations.of(context);
+        return FDialog(
+          animation: animation,
+          title: Text(l10n.withdrawEchoTitle),
+          body: Text(l10n.withdrawEchoBody),
+          actions: [
+            FButton(
+              variant: FButtonVariant.destructive,
+              onPress: () => Navigator.of(context).pop(true),
+              child: Text(l10n.withdrawConsent),
+            ),
+            FButton(
+              variant: FButtonVariant.outline,
+              onPress: () => Navigator.of(context).pop(false),
+              child: Text(l10n.keepConsent),
+            ),
+          ],
+        );
+      },
     );
     if (!mounted || confirmed != true) return;
     final result = await ref
@@ -150,10 +157,10 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
       ok: (_) {
         setState(() {
           _echoGranted = false;
-          _status = 'Echo consent withdrawn.';
+          _status = AppLocalizations.of(context).echoConsentWithdrawn;
           _error = null;
         });
-        announce(context, 'Echo consent withdrawn.');
+        announce(context, AppLocalizations.of(context).echoConsentWithdrawn);
       },
       err: (failure) => setState(() => _error = failure.message),
     );
@@ -163,7 +170,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
     final user = ref.read(authControllerProvider).value;
     final needsPassword = user?.methods.contains(AuthMethod.password) ?? false;
     if (needsPassword && _password.text.length < 12) {
-      setState(() => _error = 'Re-enter your password to erase this account.');
+      setState(() => _error = AppLocalizations.of(context).reenterPassword);
       return;
     }
     final result = await ref
@@ -173,7 +180,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
     result.when(
       ok: (_) {
         setState(() {
-          _status = 'Account erased.';
+          _status = AppLocalizations.of(context).accountErased;
           _error = null;
         });
         context.go('/');
@@ -185,12 +192,14 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final l10n = AppLocalizations.of(context);
     final config = ref.watch(configProvider);
     final user = ref.watch(authControllerProvider).value;
     final needsPassword = user?.methods.contains(AuthMethod.password) ?? false;
     final hasPasskey = user?.methods.contains(AuthMethod.passkey) ?? false;
+    final categories = _localizedCategories(l10n);
     return PenumbraChrome(
-      title: 'Privacy',
+      title: l10n.privacyTitle,
       child: PenumbraPage(
         maxWidth: 780,
         child: Padding(
@@ -199,7 +208,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Your rights',
+                l10n.yourRights,
                 style: theme.typography.xl3.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
@@ -208,8 +217,10 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 66 * 8),
                 child: Text(
-                  'Controller: ${config.controllerName}. Contact: ${config.controllerEmail}. '
-                  'Age: 16+. Necessary storage only — no marketing cookies.',
+                  l10n.controllerLine(
+                    config.controllerName,
+                    config.controllerEmail,
+                  ),
                   style: theme.typography.sm.copyWith(
                     color: theme.colors.mutedForeground,
                     height: 1.5,
@@ -225,41 +236,72 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
               if (_status != null) FAlert(title: Text(_status!)),
               const SizedBox(height: 8),
               FTextField(
-                label: const Text('Display name'),
-                description: const Text('Art. 16 rectification. Optional.'),
+                label: Text(l10n.displayName),
+                description: Text(l10n.displayNameHint),
                 control: FTextFieldControl.managed(controller: _displayName),
               ),
               const SizedBox(height: 12),
               Semantics(
                 button: true,
-                label: 'Save display name',
+                label: l10n.saveDisplayName,
                 child: FButton(
                   onPress: _saveDisplayName,
-                  child: const Text('Save display name'),
+                  child: Text(l10n.saveDisplayName),
                 ),
               ),
               const SizedBox(height: 24),
-              for (var i = 0; i < penumbraDataCategories().length; i++) ...[
+              for (var i = 0; i < categories.length; i++) ...[
                 _Category(
-                  category: penumbraDataCategories()[i],
+                  category: categories[i],
                 ).penumbraEnter(context, index: i),
                 const SizedBox(height: 24),
               ],
+              Text(
+                l10n.securityEvents,
+                style: theme.typography.lg.copyWith(
+                  fontFamily: PenumbraInk.displayFamily,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.securityEventsHint,
+                style: theme.typography.sm.copyWith(
+                  color: theme.colors.mutedForeground,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (_events.isEmpty)
+                Text(
+                  l10n.noSecurityEvents,
+                  style: theme.typography.sm.copyWith(
+                    color: theme.colors.mutedForeground,
+                  ),
+                )
+              else
+                for (final event in _events.reversed)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '${event.at.toUtc().toIso8601String()} · ${event.type.name}'
+                      '${event.detail == null || event.detail!.isEmpty ? '' : ' · ${event.detail}'}',
+                      style: theme.typography.sm.copyWith(height: 1.4),
+                    ),
+                  ),
+              const SizedBox(height: 24),
               if (needsPassword) ...[
                 FTextField(
                   key: const Key('erase-password'),
-                  label: const Text('Password to erase'),
+                  label: Text(l10n.passwordToErase),
                   obscureText: true,
-                  description: const Text(
-                    'Art. 17 erasure requires a recent password confirmation.',
-                  ),
+                  description: Text(l10n.passwordToEraseHint),
                   control: FTextFieldControl.managed(controller: _password),
                 ),
                 const SizedBox(height: 16),
               ] else ...[
                 Text(
-                  'OAuth and passkey accounts can erase only with a sign-in from the last five minutes. '
-                  'Sign in again first if that window has closed.',
+                  l10n.oauthEraseHint,
                   style: theme.typography.sm.copyWith(
                     color: theme.colors.mutedForeground,
                     height: 1.45,
@@ -271,30 +313,27 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  FButton(
-                    onPress: _exportData,
-                    child: const Text('Export my data'),
-                  ),
+                  FButton(onPress: _exportData, child: Text(l10n.exportMyData)),
                   FButton(
                     variant: FButtonVariant.destructive,
                     onPress: _erase,
-                    child: const Text('Erase my account'),
+                    child: Text(l10n.eraseMyAccount),
                   ),
                   if (_echoGranted)
                     FButton(
                       variant: FButtonVariant.outline,
                       onPress: _withdrawEcho,
-                      child: const Text('Withdraw echo consent'),
+                      child: Text(l10n.withdrawEchoConsent),
                     ),
                   if (!hasPasskey)
                     FButton(
                       variant: FButtonVariant.outline,
                       onPress: _passkeyBusy ? null : _addPasskey,
-                      child: const Text('Add a passkey'),
+                      child: Text(l10n.addPasskey),
                     )
                   else
                     Text(
-                      'A passkey is already on this account.',
+                      l10n.passkeyAlready,
                       style: theme.typography.sm.copyWith(
                         color: theme.colors.mutedForeground,
                       ),
@@ -314,18 +353,18 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                           ClipboardData(text: jsonEncode(_export!.toJson())),
                         );
                         if (context.mounted) {
-                          announce(context, 'Export copied to clipboard');
+                          announce(context, l10n.exportCopied);
                         }
                       },
-                      child: const Text('Copy JSON'),
+                      child: Text(l10n.copyJson),
                     ),
                     Semantics(
                       button: true,
-                      label: 'Download export as JSON',
+                      label: l10n.downloadExportSemantics,
                       child: FButton(
                         variant: FButtonVariant.outline,
                         onPress: _downloadExport,
-                        child: const Text('Download JSON'),
+                        child: Text(l10n.downloadJson),
                       ),
                     ),
                   ],
@@ -343,6 +382,39 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
     );
   }
 }
+
+List<DataCategory> _localizedCategories(AppLocalizations l10n) => [
+  DataCategory(
+    name: l10n.catAccountName,
+    purpose: l10n.catAccountPurpose,
+    lawfulBasis: l10n.catAccountBasis,
+    retention: l10n.catAccountRetention,
+  ),
+  DataCategory(
+    name: l10n.catBoardName,
+    purpose: l10n.catBoardPurpose,
+    lawfulBasis: l10n.catBoardBasis,
+    retention: l10n.catBoardRetention,
+  ),
+  DataCategory(
+    name: l10n.catNodesName,
+    purpose: l10n.catNodesPurpose,
+    lawfulBasis: l10n.catNodesBasis,
+    retention: l10n.catNodesRetention,
+  ),
+  DataCategory(
+    name: l10n.catEventsName,
+    purpose: l10n.catEventsPurpose,
+    lawfulBasis: l10n.catEventsBasis,
+    retention: l10n.catEventsRetention,
+  ),
+  DataCategory(
+    name: l10n.catEchoName,
+    purpose: l10n.catEchoPurpose,
+    lawfulBasis: l10n.catEchoBasis,
+    retention: l10n.catEchoRetention,
+  ),
+];
 
 class _Category extends StatelessWidget {
   const _Category({required this.category});

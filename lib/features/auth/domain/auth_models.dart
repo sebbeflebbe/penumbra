@@ -1,6 +1,6 @@
 import '../../../core/result.dart';
 
-enum AuthMethod { password, magicLink, google, github, passkey }
+enum AuthMethod { password, magicLink, google, github, passkey, bankId }
 
 class AuthUser {
   const AuthUser({
@@ -86,6 +86,7 @@ abstract class AuthRepository {
   Future<Result<AuthUser, AuthFailure>> signInWithGoogle();
   Future<Result<AuthUser, AuthFailure>> signInWithGitHub();
   Future<Result<AuthUser, AuthFailure>> signInWithPasskey();
+  Future<Result<AuthUser, AuthFailure>> signInWithBankId();
   Future<Result<void, AuthFailure>> registerPasskey();
   Future<Result<AuthUser, AuthFailure>> enterDemoStudio();
   Future<Result<void, AuthFailure>> signOut();

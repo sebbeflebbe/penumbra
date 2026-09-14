@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:forui/forui.dart';
 
 import '../../../app/theme.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../boards/domain/board.dart';
 import '../../boards/domain/echo_pairing.dart';
 
@@ -80,6 +81,7 @@ class _CardIndexState extends State<CardIndex> {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final l10n = AppLocalizations.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colors.background,
@@ -98,7 +100,7 @@ class _CardIndexState extends State<CardIndex> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Index',
+              l10n.index,
               style: theme.typography.lg.copyWith(
                 fontFamily: PenumbraInk.displayFamily,
                 fontWeight: FontWeight.w500,
@@ -106,7 +108,7 @@ class _CardIndexState extends State<CardIndex> {
             ),
             const SizedBox(height: 4),
             Text(
-              'A conversation. Arrow keys or Move reposition the selected slip.',
+              l10n.indexHint,
               style: theme.typography.xs.copyWith(
                 color: theme.colors.mutedForeground,
                 height: 1.4,
@@ -206,7 +208,7 @@ class _CardIndexState extends State<CardIndex> {
                                   const SizedBox(height: 2),
                                   Text(
                                     echo
-                                        ? (node.text ?? 'Echo')
+                                        ? (node.text ?? l10n.echoLabel)
                                         : node.semanticsLabel,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,

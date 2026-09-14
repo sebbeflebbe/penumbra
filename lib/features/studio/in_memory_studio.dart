@@ -314,6 +314,10 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
       _federated(AuthMethod.passkey, 'passkey-ada@penumbra.studio');
 
   @override
+  Future<Result<AuthUser, AuthFailure>> signInWithBankId() =>
+      _federated(AuthMethod.bankId, 'bankid-ada@penumbra.studio');
+
+  @override
   Future<Result<void, AuthFailure>> registerPasskey() async {
     final user = _current;
     if (user == null)
@@ -332,6 +336,11 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
       _sessionDek = account.dek;
       final user = _toUser(account);
       _setCurrent(user);
+      securityLog.record(
+        type: SecurityEventType.signInSuccess,
+        userId: user.id,
+        detail: 'demo',
+      );
       return Ok(user);
     }
     final account = await _createAccount(
@@ -686,6 +695,16 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
   }
 
   @override
+  Future<Result<List<SecurityEvent>, AppFailure>> securityEvents() async {
+    final user = _requireUser();
+    if (user == null) return const Err(UnauthenticatedFailure());
+    return Ok([
+      for (final event in securityLog.events)
+        if (event.userId == user.id) event,
+    ]);
+  }
+
+  @override
   Future<Result<ConsentEvent, AppFailure>> recordConsent(
     ConsentKind kind, {
     required bool granted,
@@ -759,6 +778,15 @@ class InMemoryStudio implements AuthRepository, PrivacyRepository {
               'granted': c.granted,
               'at': c.at.toIso8601String(),
             },
+        ],
+        securityEvents: [
+          for (final event in securityLog.events)
+            if (event.userId == user.id)
+              {
+                'at': event.at.toIso8601String(),
+                'type': event.type.name,
+                'detail': event.detail,
+              },
         ],
       ),
     );

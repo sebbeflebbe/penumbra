@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../app/theme.dart';
 import '../../../core/a11y/motion.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/chrome.dart';
 
 class LandingPage extends ConsumerWidget {
@@ -14,6 +15,7 @@ class LandingPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = context.theme;
+    final l10n = AppLocalizations.of(context);
     return PenumbraChrome(
       child: PenumbraPage(
         child: Padding(
@@ -22,7 +24,7 @@ class LandingPage extends ConsumerWidget {
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= 860;
               final headline = Text(
-                'A quiet studio for thinking in space.',
+                l10n.landingHeadline,
                 style: theme.typography.xl4.copyWith(
                   fontWeight: FontWeight.w500,
                   height: 1.08,
@@ -32,7 +34,7 @@ class LandingPage extends ConsumerWidget {
               final lede = ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
                 child: Text(
-                  "A spatial notebook for thoughts that aren't ready to leave the room. Notes stay encrypted in the browser; you hold the key. The studio is yours alone.",
+                  l10n.landingLede,
                   style: theme.typography.lg.copyWith(
                     color: theme.colors.mutedForeground,
                     height: 1.55,
@@ -56,17 +58,17 @@ class LandingPage extends ConsumerWidget {
                       }
                     },
                     prefix: const Icon(FLucideIcons.fingerprint),
-                    child: const Text('Enter the studio'),
+                    child: Text(l10n.enterStudio),
                   ),
                   FButton(
                     variant: FButtonVariant.outline,
                     onPress: () => context.go('/making-of'),
-                    child: const Text('Read the making of'),
+                    child: Text(l10n.readMakingOf),
                   ),
                   FButton(
                     variant: FButtonVariant.ghost,
                     onPress: () => context.go('/legal/privacy'),
-                    child: const Text('Privacy'),
+                    child: Text(l10n.navPrivacy),
                   ),
                 ],
               ).penumbraEnter(context, delayMs: 80);
@@ -102,7 +104,7 @@ class LandingPage extends ConsumerWidget {
                     teaser,
                   ],
                   const SizedBox(height: 64),
-                  _Facts(theme: theme),
+                  _Facts(theme: theme, l10n: l10n),
                 ],
               );
             },
@@ -114,28 +116,17 @@ class LandingPage extends ConsumerWidget {
 }
 
 class _Facts extends StatelessWidget {
-  const _Facts({required this.theme});
+  const _Facts({required this.theme, required this.l10n});
 
   final FThemeData theme;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (
-        title: 'Private by default',
-        body:
-            'Board bodies are encrypted in the browser before they touch a server.',
-      ),
-      (
-        title: 'Accessible by design',
-        body:
-            'The canvas has a document order, names, and a high-contrast theme.',
-      ),
-      (
-        title: 'Legally operable',
-        body:
-            'GDPR rights, an SBOM, and an honest “we are not CE-marked” note.',
-      ),
+    final items = [
+      (title: l10n.factPrivateTitle, body: l10n.factPrivateBody),
+      (title: l10n.factA11yTitle, body: l10n.factA11yBody),
+      (title: l10n.factLegalTitle, body: l10n.factLegalBody),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -282,17 +273,17 @@ class _TeaserStage extends StatelessWidget {
                 _PaperCard(
                   left: 28 + shiftA.dx,
                   top: 36 + shiftA.dy,
-                  label: 'Private by default.',
+                  label: AppLocalizations.of(context).teaserPrivate,
                 ),
                 _PaperCard(
                   left: 250 + shiftB.dx,
                   top: 64 + shiftB.dy,
-                  label: 'Accessible by design.',
+                  label: AppLocalizations.of(context).teaserAccessible,
                 ),
                 _PaperCard(
                   left: 140 + shiftC.dx,
                   top: 168 + shiftC.dy,
-                  label: 'Colour swatch',
+                  label: AppLocalizations.of(context).teaserSwatch,
                   swatch: PenumbraInk.copper,
                 ),
               ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
+import '../l10n/app_localizations.dart';
 import 'providers.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -13,6 +14,7 @@ class PenumbraApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final appearance = ref.watch(appearanceProvider);
+    final locale = ref.watch(localeProvider);
     final platform =
         WidgetsBinding.instance.platformDispatcher.platformBrightness;
     final pair = PenumbraThemes.pair(appearance, platform);
@@ -44,8 +46,12 @@ class PenumbraApp extends ConsumerWidget {
         PenumbraAppearance.highContrast => ThemeMode.light,
         PenumbraAppearance.system => ThemeMode.system,
       },
-      localizationsDelegates: FLocalizations.localizationsDelegates,
-      supportedLocales: FLocalizations.supportedLocales,
+      locale: locale,
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        ...FLocalizations.localizationsDelegates,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
       builder: (context, child) {
         return FToaster(

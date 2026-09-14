@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/a11y/motion.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/chrome.dart';
 import '../../auth/presentation/locked_studio.dart';
 import '../../boards/domain/board.dart';
@@ -138,7 +139,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
   Future<void> _addNote() async {
     if (_restricted) {
-      announce(context, 'This board is restricted (Art. 18).');
+      announce(context, AppLocalizations.of(context).boardRestrictedArt18);
       return;
     }
     final text = _note.text.trim();
@@ -163,7 +164,10 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
           _focusedIndex = _nodes.length - 1;
           _note.clear();
         });
-        announce(context, 'Added card ${_nodes.length} of ${_nodes.length}');
+        announce(
+          context,
+          AppLocalizations.of(context).addedCard(_nodes.length),
+        );
       },
       err: (failure) => announce(context, failure.message),
     );
@@ -171,7 +175,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
   Future<void> _addSwatch() async {
     if (_restricted) {
-      announce(context, 'This board is restricted (Art. 18).');
+      announce(context, AppLocalizations.of(context).boardRestrictedArt18);
       return;
     }
     const colors = [0xFF1F4E5A, 0xFFC45C26, 0xFF2C2C2C, 0xFFE8DCC8];
@@ -193,7 +197,8 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
   Future<void> _nudge(int dx, int dy) async {
     if (_nodes.isEmpty || _restricted) {
-      if (_restricted) announce(context, 'This board is restricted (Art. 18).');
+      if (_restricted)
+        announce(context, AppLocalizations.of(context).boardRestrictedArt18);
       return;
     }
     final node = _nodes[_focusedIndex.clamp(0, _nodes.length - 1)];
@@ -222,7 +227,9 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
     final moved = next.firstWhere((item) => item.id == id);
     announce(
       context,
-      'Moved. Card ${EchoPairing.numeral(EchoPairing.conversation(_nodes), moved)}.',
+      AppLocalizations.of(
+        context,
+      ).movedCard(EchoPairing.numeral(EchoPairing.conversation(_nodes), moved)),
     );
     await _untangleEchoes();
   }
@@ -232,20 +239,17 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
       context: context,
       builder: (context, style, animation) => FDialog(
         animation: animation,
-        title: const Text('Summon an echo'),
-        body: const Text(
-          'This thought will go to Google once. The rest of the board stays here. '
-          'Google LLC processes that one slip under your consent (Art. 6(1)(a)).',
-        ),
+        title: Text(AppLocalizations.of(context).summonEcho),
+        body: Text(AppLocalizations.of(context).echoConsentBody),
         actions: [
           FButton(
             onPress: () => Navigator.of(context).pop(true),
-            child: const Text('Send this thought'),
+            child: Text(AppLocalizations.of(context).sendThisThought),
           ),
           FButton(
             variant: FButtonVariant.outline,
             onPress: () => Navigator.of(context).pop(false),
-            child: const Text('Keep it here'),
+            child: Text(AppLocalizations.of(context).keepItHere),
           ),
         ],
       ),
@@ -255,7 +259,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
   Future<void> _summonEcho() async {
     if (_restricted) {
-      announce(context, 'This board is restricted (Art. 18).');
+      announce(context, AppLocalizations.of(context).boardRestrictedArt18);
       return;
     }
     final parent = _selected;
@@ -300,7 +304,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
               _nodes = [..._nodes, created];
               _summoning = false;
             });
-            announce(context, 'An echo was placed nearby.');
+            announce(context, AppLocalizations.of(context).echoPlaced);
           },
           err: (failure) {
             setState(() {
@@ -337,7 +341,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
             _focusedIndex = _focusedIndex.clamp(0, _nodes.length - 1);
           }
         });
-        announce(context, 'Echo dismissed.');
+        announce(context, AppLocalizations.of(context).echoDismissed);
       },
       err: (failure) => announce(context, failure.message),
     );
@@ -345,7 +349,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
   Future<void> _saveText(BoardNode node, String text) async {
     if (_restricted) {
-      announce(context, 'This board is restricted (Art. 18).');
+      announce(context, AppLocalizations.of(context).boardRestrictedArt18);
       return;
     }
     final result = await ref
@@ -359,7 +363,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
             for (final item in _nodes) item.id == updated.id ? updated : item,
           ],
         );
-        announce(context, 'Note saved.');
+        announce(context, AppLocalizations.of(context).noteSaved);
       },
       err: (failure) => announce(context, failure.message),
     );
@@ -367,27 +371,25 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
   Future<void> _deleteHuman(BoardNode node) async {
     if (_restricted) {
-      announce(context, 'This board is restricted (Art. 18).');
+      announce(context, AppLocalizations.of(context).boardRestrictedArt18);
       return;
     }
     final confirmed = await showFDialog<bool>(
       context: context,
       builder: (context, style, animation) => FDialog(
         animation: animation,
-        title: const Text('Remove this slip'),
-        body: const Text(
-          'The note and its echo, if any, will be removed from this board.',
-        ),
+        title: Text(AppLocalizations.of(context).removeSlipTitle),
+        body: Text(AppLocalizations.of(context).removeSlipBody),
         actions: [
           FButton(
             variant: FButtonVariant.destructive,
             onPress: () => Navigator.of(context).pop(true),
-            child: const Text('Delete this note'),
+            child: Text(AppLocalizations.of(context).deleteThisNote),
           ),
           FButton(
             variant: FButtonVariant.outline,
             onPress: () => Navigator.of(context).pop(false),
-            child: const Text('Keep it'),
+            child: Text(AppLocalizations.of(context).keepIt),
           ),
         ],
       ),
@@ -408,7 +410,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
             _focusedIndex = _focusedIndex.clamp(0, _nodes.length - 1);
           }
         });
-        announce(context, 'Note deleted.');
+        announce(context, AppLocalizations.of(context).noteDeleted);
       },
       err: (failure) => announce(context, failure.message),
     );
@@ -416,7 +418,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
 
   void _acknowledgePhrase() {
     ref.read(authRepositoryProvider).acknowledgeRecoveryPhrase();
-    announce(context, 'Recovery phrase saved.');
+    announce(context, AppLocalizations.of(context).phraseSaved);
     setState(() {});
   }
 
@@ -445,7 +447,7 @@ class _CanvasPageState extends ConsumerState<CanvasPage> {
       EchoPairing.conversation(_nodes),
       node.first,
     );
-    announce(context, 'Moved. Card $numeral.');
+    announce(context, AppLocalizations.of(context).movedCard(numeral));
     await _untangleEchoes();
   }
 
