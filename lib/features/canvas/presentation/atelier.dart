@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 import '../../../app/theme.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../boards/domain/board.dart';
 import '../../boards/domain/echo_pairing.dart';
 import 'paper_slip.dart';
@@ -87,9 +88,9 @@ class Atelier extends StatelessWidget {
           children: [
             if (phrase != null) ...[
               FAlert(
-                title: const Text('Save this recovery phrase'),
+                title: Text(AppLocalizations.of(context).savePhraseTitle),
                 subtitle: Text(
-                  '$phrase\nOAuth and passkey accounts wrap your key with this phrase. We cannot recover it.',
+                  '$phrase\n${AppLocalizations.of(context).savePhraseBody}',
                 ),
               ),
               const SizedBox(height: 8),
@@ -97,16 +98,16 @@ class Atelier extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: FButton(
                   onPress: onAcknowledgePhrase,
-                  child: const Text('I have saved this phrase'),
+                  child: Text(AppLocalizations.of(context).savedPhrase),
                 ),
               ),
               const SizedBox(height: 12),
             ],
             if (board.restricted) ...[
-              const FAlert(
-                title: Text('This board is restricted (Art. 18).'),
+              FAlert(
+                title: Text(AppLocalizations.of(context).boardRestrictedArt18),
                 subtitle: Text(
-                  'Place, edit, delete, and move are paused until you unrestrict it.',
+                  AppLocalizations.of(context).boardRestrictedSubtitle,
                 ),
               ),
               const SizedBox(height: 12),
@@ -261,7 +262,9 @@ class _RunningHead extends StatelessWidget {
               ),
             ),
             Text(
-              count == 1 ? '1 card' : '$count cards',
+              count == 1
+                  ? AppLocalizations.of(context).cardCountOne
+                  : AppLocalizations.of(context).cardCountMany(count),
               style: theme.typography.xs.copyWith(
                 color: theme.colors.mutedForeground,
                 letterSpacing: 0.6,

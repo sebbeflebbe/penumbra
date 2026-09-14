@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:clock/clock.dart';
@@ -42,13 +43,15 @@ void main() {
   );
 
   test(
-    'passkey, Google, GitHub and magic link all establish a session',
+    'passkey, Google, GitHub, BankID and magic link all establish a session',
     () async {
       expect((await studio.signInWithPasskey()).isOk, isTrue);
       await studio.signOut();
       expect((await studio.signInWithGoogle()).isOk, isTrue);
       await studio.signOut();
       expect((await studio.signInWithGitHub()).isOk, isTrue);
+      await studio.signOut();
+      expect((await studio.signInWithBankId()).isOk, isTrue);
       await studio.signOut();
       expect(
         (await studio.sendMagicLink(email: 'link@penumbra.studio')).isOk,
@@ -65,6 +68,25 @@ void main() {
     studio.acknowledgeRecoveryPhrase();
     expect(studio.current?.needsRecoveryPhraseReveal, isFalse);
   });
+
+  test(
+    'BankID wrap uses a phrase and export has no personnummer-shaped strings',
+    () async {
+      final user = (await studio.signInWithBankId()).okOrNull!;
+      expect(user.methods, contains(AuthMethod.bankId));
+      expect(user.needsRecoveryPhraseReveal, isTrue);
+      expect(studio.pendingRecoveryPhrase!.split(' '), hasLength(12));
+      final exported = (await studio.exportMine()).okOrNull!;
+      expect(
+        exported.securityEvents.any((row) => row['type'] == 'signInSuccess'),
+        isTrue,
+      );
+      final json = jsonEncode(exported.toJson());
+      expect(json, isNot(contains('personalNumber')));
+      expect(json.toLowerCase(), isNot(contains('personnummer')));
+      expect(json, isNot(contains(RegExp(r'\b\d{6}[-+]?\d{4}\b'))));
+    },
+  );
 
   test('boards are isolated between users (RLS contract)', () async {
     await studio.signUpWithPassword(
@@ -253,35 +275,38 @@ void main() {
     );
   });
 
-  test('phrase unlock restores decryption after the session DEK is dropped', () async {
-    await studio.signInWithGitHub();
-    final phrase = studio.pendingRecoveryPhrase!;
-    studio.acknowledgeRecoveryPhrase();
-    final board = (await boards.create(title: 'Keep')).okOrNull!;
-    final node = BoardNode(
-      id: const Uuid().v4(),
-      boardId: board.id,
-      x: 8,
-      y: 8,
-      kind: NodeKind.text,
-      text: 'secret-note',
-    );
-    expect((await canvas.upsert(node)).isOk, isTrue);
-    studio.debugLockSession();
-    expect(studio.current?.needsPhraseUnlock, isTrue);
-    expect((await canvas.listNodes(board.id)).isErr, isTrue);
-    expect(
-      (await studio.unlockWithRecoveryPhrase('not-twelve-words')).errOrNull,
-      isA<InvalidCredentialsFailure>(),
-    );
-    expect(studio.sessionDek, isNull);
-    expect((await studio.unlockWithRecoveryPhrase(phrase)).isOk, isTrue);
-    expect(studio.current?.needsPhraseUnlock, isFalse);
-    expect(
-      (await canvas.listNodes(board.id)).okOrNull!.single.text,
-      'secret-note',
-    );
-  });
+  test(
+    'phrase unlock restores decryption after the session DEK is dropped',
+    () async {
+      await studio.signInWithGitHub();
+      final phrase = studio.pendingRecoveryPhrase!;
+      studio.acknowledgeRecoveryPhrase();
+      final board = (await boards.create(title: 'Keep')).okOrNull!;
+      final node = BoardNode(
+        id: const Uuid().v4(),
+        boardId: board.id,
+        x: 8,
+        y: 8,
+        kind: NodeKind.text,
+        text: 'secret-note',
+      );
+      expect((await canvas.upsert(node)).isOk, isTrue);
+      studio.debugLockSession();
+      expect(studio.current?.needsPhraseUnlock, isTrue);
+      expect((await canvas.listNodes(board.id)).isErr, isTrue);
+      expect(
+        (await studio.unlockWithRecoveryPhrase('not-twelve-words')).errOrNull,
+        isA<InvalidCredentialsFailure>(),
+      );
+      expect(studio.sessionDek, isNull);
+      expect((await studio.unlockWithRecoveryPhrase(phrase)).isOk, isTrue);
+      expect(studio.current?.needsPhraseUnlock, isFalse);
+      expect(
+        (await canvas.listNodes(board.id)).okOrNull!.single.text,
+        'secret-note',
+      );
+    },
+  );
 
   test('remote echo consent latest-wins after withdraw', () async {
     await studio.signUpWithPassword(
@@ -347,6 +372,9 @@ void main() {
       'Ada Lovelace',
     );
     expect((await studio.updateDisplayName('  ')).isOk, isTrue);
-    expect((await studio.exportMine()).okOrNull!.profile['displayName'], isNull);
+    expect(
+      (await studio.exportMine()).okOrNull!.profile['displayName'],
+      isNull,
+    );
   });
 }

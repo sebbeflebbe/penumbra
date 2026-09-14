@@ -14,6 +14,8 @@ Set `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_PROJECT_NAM
 
 Apply `supabase/migrations/` on the Frankfurt project. Set **both** `SUPABASE_URL` and `SUPABASE_ANON_KEY`, or neither.
 
+BankID follows the same rule: both `BANKID_ISSUER` and `BANKID_CLIENT_ID`, or neither. This build still does not run a live BankID ceremony when they are set. Unset is honest unavailable copy. Do not put a relying-party certificate in CI.
+
 ## Branch protection
 
 Optional GitHub setting on `main`: require the four PR checks **analyze**, **test**, **build-web**, and **supply-chain**. Direct pushes to `main` should stay off. See `docs/versioning.md`.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 import '../../../app/theme.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../boards/domain/board.dart';
 
 class PaperSlip extends StatefulWidget {
@@ -67,6 +68,7 @@ class _PaperSlipState extends State<PaperSlip> {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final l10n = AppLocalizations.of(context);
     final echo = _echo;
     final selected = widget.selected;
     final highContrast = widget.highContrast;
@@ -129,8 +131,8 @@ class _PaperSlipState extends State<PaperSlip> {
                   if (echo && selected && widget.onDismiss != null)
                     _namedAction(
                       theme,
-                      label: 'Dismiss',
-                      spoken: 'Dismiss this echo',
+                      label: l10n.dismiss,
+                      spoken: l10n.dismissThisEcho,
                       onTap: widget.onDismiss!,
                     )
                   else if (selected && !_editing)
@@ -155,7 +157,7 @@ class _PaperSlipState extends State<PaperSlip> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Specimen',
+                      l10n.specimen,
                       style: theme.typography.xs.copyWith(
                         color: theme.colors.mutedForeground,
                         letterSpacing: 0.8,
@@ -165,12 +167,13 @@ class _PaperSlipState extends State<PaperSlip> {
                 )
               else if (_editing)
                 FTextField(
-                  hint: 'A thought, privately held',
+                  hint: l10n.composeHint,
                   control: FTextFieldControl.managed(controller: _edit),
                 )
               else
                 Text(
-                  widget.node.text ?? (echo ? 'Echo' : 'Untitled note'),
+                  widget.node.text ??
+                      (echo ? l10n.echoLabel : l10n.untitledNote),
                   style: theme.typography.md.copyWith(
                     fontFamily: PenumbraInk.displayFamily,
                     fontStyle: echo ? FontStyle.italic : FontStyle.normal,
@@ -192,8 +195,8 @@ class _PaperSlipState extends State<PaperSlip> {
                       _editing
                           ? _namedAction(
                               theme,
-                              label: 'Save',
-                              spoken: 'Save this note',
+                              label: l10n.save,
+                              spoken: l10n.saveThisNote,
                               onTap: () {
                                 final text = _edit.text.trim();
                                 if (text.isEmpty) return;
@@ -203,8 +206,8 @@ class _PaperSlipState extends State<PaperSlip> {
                             )
                           : _namedAction(
                               theme,
-                              label: 'Edit',
-                              spoken: 'Edit this note',
+                              label: l10n.edit,
+                              spoken: l10n.editThisNote,
                               onTap: () => setState(() {
                                 _edit.text = widget.node.text ?? '';
                                 _editing = true;
@@ -213,15 +216,15 @@ class _PaperSlipState extends State<PaperSlip> {
                     if (_editing)
                       _namedAction(
                         theme,
-                        label: 'Cancel',
-                        spoken: 'Cancel editing',
+                        label: l10n.cancel,
+                        spoken: l10n.cancelEditing,
                         onTap: () => setState(() => _editing = false),
                       ),
                     if (!_editing && widget.onDelete != null)
                       _namedAction(
                         theme,
-                        label: 'Delete',
-                        spoken: 'Delete this note',
+                        label: l10n.delete,
+                        spoken: l10n.deleteThisNoteSpoken,
                         onTap: widget.onDelete!,
                       ),
                     if (!_editing && widget.onDrag != null) _moveHandle(theme),
@@ -262,9 +265,10 @@ class _PaperSlipState extends State<PaperSlip> {
   }
 
   Widget _moveHandle(FThemeData theme) {
+    final l10n = AppLocalizations.of(context);
     return Semantics(
       button: true,
-      label: 'Move this note',
+      label: l10n.moveThisNote,
       child: Focus(
         focusNode: _moveFocus,
         child: GestureDetector(
@@ -283,7 +287,7 @@ class _PaperSlipState extends State<PaperSlip> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Move',
+                l10n.move,
                 style: theme.typography.xs.copyWith(
                   color: theme.colors.primary,
                   letterSpacing: 0.6,

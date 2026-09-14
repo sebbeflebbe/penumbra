@@ -25,6 +25,7 @@ class PrivacyExport {
     required this.boards,
     required this.nodes,
     required this.consents,
+    this.securityEvents = const [],
   });
 
   final DateTime generatedAt;
@@ -32,6 +33,7 @@ class PrivacyExport {
   final List<Map<String, Object?>> boards;
   final List<Map<String, Object?>> nodes;
   final List<Map<String, Object?>> consents;
+  final List<Map<String, Object?>> securityEvents;
 
   Map<String, Object?> toJson() => {
     'generatedAt': generatedAt.toUtc().toIso8601String(),
@@ -39,6 +41,7 @@ class PrivacyExport {
     'boards': boards,
     'nodes': nodes,
     'consents': consents,
+    'securityEvents': securityEvents,
   };
 }
 

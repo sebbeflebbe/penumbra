@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 import '../../../app/theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ComposeBar extends StatelessWidget {
   const ComposeBar({
@@ -23,6 +24,7 @@ class ComposeBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final l10n = AppLocalizations.of(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 840),
       child: DecoratedBox(
@@ -44,7 +46,7 @@ class ComposeBar extends StatelessWidget {
             builder: (context, constraints) {
               final tight = constraints.maxWidth < 620;
               final field = FTextField(
-                hint: 'A thought, privately held',
+                hint: l10n.composeHint,
                 enabled: enabled,
                 control: FTextFieldControl.managed(controller: controller),
               );
@@ -54,12 +56,12 @@ class ComposeBar extends StatelessWidget {
                 children: [
                   FButton(
                     onPress: enabled ? onPlace : null,
-                    child: const Text('Place'),
+                    child: Text(l10n.place),
                   ),
                   FButton(
                     variant: FButtonVariant.outline,
                     onPress: enabled ? onSwatch : null,
-                    child: const Text('Swatch'),
+                    child: Text(l10n.swatch),
                   ),
                   if (onSummon != null || summoning)
                     FButton(
@@ -72,7 +74,7 @@ class ComposeBar extends StatelessWidget {
                               child: FCircularProgress(),
                             )
                           : null,
-                      child: const Text('Summon an echo'),
+                      child: Text(l10n.summonEcho),
                     ),
                 ],
               );
@@ -85,7 +87,7 @@ class ComposeBar extends StatelessWidget {
               return Row(
                 children: [
                   Text(
-                    'Compose',
+                    l10n.compose,
                     style: theme.typography.xs.copyWith(
                       fontFamily: PenumbraInk.displayFamily,
                       color: theme.colors.mutedForeground,

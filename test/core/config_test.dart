@@ -36,4 +36,29 @@ void main() {
       throwsA(isA<ArgumentError>()),
     );
   });
+
+  test('neither BankID define stays unset; both select configured', () {
+    expect(resolveEidMode(bankIdIssuer: '', bankIdClientId: ''), EidMode.unset);
+    expect(
+      resolveEidMode(
+        bankIdIssuer: 'https://example.invalid',
+        bankIdClientId: 'client',
+      ),
+      EidMode.configured,
+    );
+  });
+
+  test('half-set BankID config fails closed', () {
+    expect(
+      () => resolveEidMode(
+        bankIdIssuer: 'https://example.invalid',
+        bankIdClientId: '',
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      () => resolveEidMode(bankIdIssuer: '', bankIdClientId: 'client'),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
 }

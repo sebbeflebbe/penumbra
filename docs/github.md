@@ -28,6 +28,9 @@ Issues:
 - https://github.com/sebbeflebbe/penumbra/issues/20 Index / Move a11y deepening
 - https://github.com/sebbeflebbe/penumbra/issues/21 Test holes for already-shipped UI
 - https://github.com/sebbeflebbe/penumbra/issues/22 Story / ADR / origin runbook / 1.2.0 honesty
+- https://github.com/sebbeflebbe/penumbra/issues/25 sv-SE / en locale as necessary storage
+- https://github.com/sebbeflebbe/penumbra/issues/26 BankID as an auth port (no personnummer)
+- https://github.com/sebbeflebbe/penumbra/issues/27 Privacy security events + DOS copy + chapter 11
 
 Four-week spec (Weeks 5–8): [roadmap.md](roadmap.md). Versioning and GitHub Flow: [versioning.md](versioning.md).
 

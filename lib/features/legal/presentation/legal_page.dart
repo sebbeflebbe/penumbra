@@ -3,6 +3,7 @@ import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/a11y/motion.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/chrome.dart';
 import 'legal_catalog.dart';
 
@@ -14,10 +15,9 @@ class LegalPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
-    final doc = LegalCatalog.documents.firstWhere(
-      (d) => d.slug == slug,
-      orElse: () => LegalCatalog.privacy,
-    );
+    final l10n = AppLocalizations.of(context);
+    final swedish = Localizations.localeOf(context).languageCode == 'sv';
+    final doc = LegalCatalog.forSlug(slug, swedish: swedish);
     return PenumbraChrome(
       title: doc.title,
       child: PenumbraPage(
@@ -40,7 +40,10 @@ class LegalPage extends StatelessWidget {
                             button: true,
                             selected: item.slug == doc.slug,
                             child: Text(
-                              item.title,
+                              LegalCatalog.forSlug(
+                                item.slug,
+                                swedish: swedish,
+                              ).title,
                               style: theme.typography.sm.copyWith(
                                 color: item.slug == doc.slug
                                     ? theme.colors.foreground
@@ -71,6 +74,17 @@ class LegalPage extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    if (swedish &&
+                        (doc.slug == 'terms' || doc.slug == 'imprint')) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.legalIncompleteSv,
+                        style: theme.typography.sm.copyWith(
+                          color: theme.colors.mutedForeground,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     Text(
                       doc.body,

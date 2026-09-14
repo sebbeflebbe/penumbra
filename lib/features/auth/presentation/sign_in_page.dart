@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../app/theme.dart';
 import '../../../core/a11y/motion.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/chrome.dart';
 import '../domain/auth_models.dart';
 
@@ -68,10 +69,23 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final l10n = AppLocalizations.of(context);
+    final swedish = Localizations.localeOf(context).languageCode == 'sv';
+    final bankIdButton = FButton(
+      variant: swedish ? FButtonVariant.primary : FButtonVariant.outline,
+      onPress: _busy
+          ? null
+          : () => _run(
+              'bankid',
+              () => ref.read(authControllerProvider.notifier).bankId(),
+            ),
+      prefix: _prefix('bankid', const Icon(FLucideIcons.smartphone)),
+      child: Text(l10n.continueBankId),
+    ).penumbraEnter(context, delayMs: swedish ? 80 : 95);
     return PenumbraChrome(
-      title: 'Sign in',
+      title: l10n.signInTitle,
       child: PenumbraPage(
-        maxWidth: 480,
+        maxWidth: 560,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24),
           child: DecoratedBox(
@@ -94,14 +108,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Enter the half-light.',
+                      l10n.signInHeadline,
                       style: theme.typography.xl3.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
                     ).penumbraEnter(context),
                     const SizedBox(height: 8),
                     Text(
-                      'Passkeys are preferred. Passwords are the weakest path and must be at least 12 characters.',
+                      l10n.signInLede,
                       style: theme.typography.sm.copyWith(
                         color: theme.colors.mutedForeground,
                         height: 1.45,
@@ -119,21 +133,44 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       FAlert(title: Text(_info!)).penumbraEnter(context),
                       const SizedBox(height: 16),
                     ],
-                    FButton(
-                      onPress: _busy
-                          ? null
-                          : () => _run(
-                              'passkey',
-                              () => ref
-                                  .read(authControllerProvider.notifier)
-                                  .passkey(),
-                            ),
-                      prefix: _prefix(
-                        'passkey',
-                        const Icon(FLucideIcons.fingerprint),
-                      ),
-                      child: const Text('Continue with a passkey'),
-                    ).penumbraEnter(context, delayMs: 80),
+                    if (swedish) ...[
+                      bankIdButton,
+                      const SizedBox(height: 10),
+                      FButton(
+                        variant: FButtonVariant.outline,
+                        onPress: _busy
+                            ? null
+                            : () => _run(
+                                'passkey',
+                                () => ref
+                                    .read(authControllerProvider.notifier)
+                                    .passkey(),
+                              ),
+                        prefix: _prefix(
+                          'passkey',
+                          const Icon(FLucideIcons.fingerprint),
+                        ),
+                        child: Text(l10n.continuePasskey),
+                      ).penumbraEnter(context, delayMs: 95),
+                    ] else ...[
+                      FButton(
+                        onPress: _busy
+                            ? null
+                            : () => _run(
+                                'passkey',
+                                () => ref
+                                    .read(authControllerProvider.notifier)
+                                    .passkey(),
+                              ),
+                        prefix: _prefix(
+                          'passkey',
+                          const Icon(FLucideIcons.fingerprint),
+                        ),
+                        child: Text(l10n.continuePasskey),
+                      ).penumbraEnter(context, delayMs: 80),
+                      const SizedBox(height: 10),
+                      bankIdButton,
+                    ],
                     const SizedBox(height: 10),
                     FButton(
                       variant: FButtonVariant.outline,
@@ -146,7 +183,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                   .google(),
                             ),
                       prefix: _prefix('google', const Icon(FLucideIcons.globe)),
-                      child: const Text('Continue with Google'),
+                      child: Text(l10n.continueGoogle),
                     ).penumbraEnter(context, delayMs: 110),
                     const SizedBox(height: 10),
                     FButton(
@@ -160,7 +197,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                   .github(),
                             ),
                       prefix: _prefix('github', const Icon(FLucideIcons.code)),
-                      child: const Text('Continue with GitHub'),
+                      child: Text(l10n.continueGitHub),
                     ).penumbraEnter(context, delayMs: 140),
                     const SizedBox(height: 24),
                     Row(
@@ -169,7 +206,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
-                            'or',
+                            l10n.orDivider,
                             style: theme.typography.xs.copyWith(
                               color: theme.colors.mutedForeground,
                             ),
@@ -181,9 +218,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     const SizedBox(height: 24),
                     FTextField.email(
                       control: FTextFieldControl.managed(controller: _email),
-                      description: const Text(
-                        'Used only to restore your studio.',
-                      ),
+                      description: Text(l10n.emailRestoreHint),
                     ).penumbraEnter(context, delayMs: 180),
                     const SizedBox(height: 12),
                     FButton(
@@ -204,16 +239,17 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                 _error = failure?.message;
                                 _info = failure == null
                                     ? (signedIn
-                                          ? 'Magic link sent (in this demo the session is opened immediately).'
-                                          : 'Check your email for a link. Keep this tab open.')
+                                          ? l10n.magicLinkDemo
+                                          : l10n.magicLinkEmail)
                                     : null;
                               });
                               if (!context.mounted) return;
-                              if (failure == null && signedIn)
+                              if (failure == null && signedIn) {
                                 context.go('/boards');
+                              }
                             },
                       prefix: _prefix('magic', const Icon(FLucideIcons.mail)),
-                      child: const Text('Email me a magic link'),
+                      child: Text(l10n.emailMagicLink),
                     ).penumbraEnter(context, delayMs: 200),
                     const SizedBox(height: 8),
                     FButton(
@@ -222,14 +258,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                           setState(() => _passwordOpen = !_passwordOpen),
                       child: Text(
                         _passwordOpen
-                            ? 'Hide password'
-                            : 'Use a password instead',
+                            ? l10n.hidePassword
+                            : l10n.usePasswordInstead,
                       ),
                     ).penumbraEnter(context, delayMs: 220),
                     if (_passwordOpen) ...[
                       const SizedBox(height: 12),
                       FTextField(
-                        label: const Text('Password'),
+                        label: Text(l10n.passwordLabel),
                         obscureText: true,
                         control: FTextFieldControl.managed(
                           controller: _password,
@@ -250,7 +286,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                     ),
                               ),
                         prefix: _prefix('password', const SizedBox.shrink()),
-                        child: const Text('Sign in with password'),
+                        child: Text(l10n.signInWithPassword),
                       ),
                       const SizedBox(height: 8),
                       FButton(
@@ -266,12 +302,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                       _password.text,
                                     ),
                               ),
-                        child: const Text('Create an account'),
+                        child: Text(l10n.createAccount),
                       ),
                     ],
                     const SizedBox(height: 8),
                     Text(
-                      'Visible only to you.',
+                      l10n.visibleOnlyToYou,
                       textAlign: TextAlign.center,
                       style: theme.typography.xs.copyWith(
                         color: theme.colors.mutedForeground,

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/theme.dart';
+import '../../l10n/app_localizations.dart';
 
 class PenumbraChrome extends ConsumerStatefulWidget {
   const PenumbraChrome({required this.child, this.title, super.key});
@@ -26,11 +27,23 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
     super.dispose();
   }
 
+  String _appearanceName(AppLocalizations l10n, PenumbraAppearance value) {
+    return switch (value) {
+      PenumbraAppearance.system => l10n.appearanceSystem,
+      PenumbraAppearance.light => l10n.appearanceLight,
+      PenumbraAppearance.dark => l10n.appearanceDark,
+      PenumbraAppearance.highContrast => l10n.appearanceHighContrast,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final l10n = AppLocalizations.of(context);
     final user = ref.watch(authControllerProvider).value;
     final appearance = ref.watch(appearanceProvider);
+    final locale = ref.watch(localeProvider);
+    final swedish = locale.languageCode == 'sv';
     final punctum = appearance == PenumbraAppearance.highContrast
         ? theme.colors.foreground
         : PenumbraInk.copper;
@@ -56,7 +69,11 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                   ),
                   child: Row(
                     children: [
-                      _Wordmark(punctum: punctum, compact: tiny),
+                      _Wordmark(
+                        punctum: punctum,
+                        compact: tiny,
+                        homeLabel: l10n.navHome,
+                      ),
                       if (!compact && widget.title != null) ...[
                         const SizedBox(width: 16),
                         Flexible(
@@ -71,24 +88,29 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                       ],
                       const Spacer(),
                       if (!tiny)
-                        const _NavLink(label: 'Making of', path: '/making-of'),
+                        _NavLink(label: l10n.navMakingOf, path: '/making-of'),
                       if (compact)
                         _OverflowNav(
                           signedIn: user != null,
                           includeMakingOf: tiny,
+                          makingOf: l10n.navMakingOf,
+                          legal: l10n.navLegal,
+                          boards: l10n.navBoards,
+                          privacy: l10n.navPrivacy,
+                          menuLabel: l10n.navMenu,
                         )
                       else ...[
-                        const _NavLink(label: 'Legal', path: '/legal/privacy'),
+                        _NavLink(label: l10n.navLegal, path: '/legal/privacy'),
                         if (user != null) ...[
-                          const _NavLink(label: 'Boards', path: '/boards'),
-                          const _NavLink(label: 'Privacy', path: '/privacy'),
+                          _NavLink(label: l10n.navBoards, path: '/boards'),
+                          _NavLink(label: l10n.navPrivacy, path: '/privacy'),
                         ],
                       ],
                       const SizedBox(width: 8),
                       if (user != null)
                         tiny
                             ? FButton.icon(
-                                semanticsLabel: 'Sign out',
+                                semanticsLabel: l10n.navSignOut,
                                 onPress: () => ref
                                     .read(authControllerProvider.notifier)
                                     .signOut(),
@@ -97,12 +119,12 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                             : FButton(
                                 variant: FButtonVariant.ghost,
                                 mainAxisSize: MainAxisSize.min,
-                                semanticsLabel: 'Sign out',
+                                semanticsLabel: l10n.navSignOut,
                                 onPress: () => ref
                                     .read(authControllerProvider.notifier)
                                     .signOut(),
                                 prefix: const Icon(FLucideIcons.logOut),
-                                child: const Text('Sign out'),
+                                child: Text(l10n.navSignOut),
                               )
                       else
                         FButton(
@@ -112,19 +134,49 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
                               ? FButtonSizeVariant.sm
                               : FButtonSizeVariant.md,
                           onPress: () => context.go('/sign-in'),
-                          child: const Text('Sign in'),
+                          child: Text(l10n.navSignIn),
                         ),
                       const SizedBox(width: 4),
+                      FButton(
+                        variant: FButtonVariant.ghost,
+                        mainAxisSize: MainAxisSize.min,
+                        size: tiny
+                            ? FButtonSizeVariant.sm
+                            : FButtonSizeVariant.md,
+                        semanticsLabel: swedish
+                            ? l10n.languageSwitchToEnglish
+                            : l10n.languageSwitchToSwedish,
+                        onPress: () {
+                          ref.read(localeProvider.notifier).toggle();
+                          announce(
+                            context,
+                            swedish
+                                ? l10n.languageAnnouncedEnglish
+                                : l10n.languageAnnouncedSwedish,
+                          );
+                        },
+                        child: Text(
+                          swedish ? l10n.languageEnglish : l10n.languageSwedish,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
                       FButton.icon(
-                        semanticsLabel:
-                            'Appearance: ${appearance.spokenName}. Switch to ${appearance.next.spokenName}.',
+                        semanticsLabel: l10n.appearanceSemantics(
+                          _appearanceName(l10n, appearance),
+                          _appearanceName(l10n, appearance.next),
+                        ),
                         size: tiny
                             ? FButtonSizeVariant.sm
                             : FButtonSizeVariant.md,
                         onPress: () {
                           final next = appearance.next;
                           ref.read(appearanceProvider.notifier).cycle();
-                          announce(context, 'Appearance: ${next.spokenName}');
+                          announce(
+                            context,
+                            l10n.appearanceAnnounced(
+                              _appearanceName(l10n, next),
+                            ),
+                          );
                         },
                         child: Icon(switch (appearance) {
                           PenumbraAppearance.light => FLucideIcons.sun,
@@ -144,7 +196,7 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
             focusNode: _mainFocus,
             child: Semantics(
               container: true,
-              label: 'Main content',
+              label: l10n.mainContent,
               explicitChildNodes: true,
               child: SelectionArea(child: widget.child),
             ),
@@ -158,9 +210,9 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
               builder: (context) {
                 if (!Focus.of(context).hasFocus) return const SizedBox.shrink();
                 return FButton(
-                  semanticsLabel: 'Skip to content',
+                  semanticsLabel: l10n.skipToContent,
                   onPress: () => _mainFocus.requestFocus(),
-                  child: const Text('Skip to content'),
+                  child: Text(l10n.skipToContent),
                 );
               },
             ),
@@ -172,9 +224,14 @@ class _PenumbraChromeState extends ConsumerState<PenumbraChrome> {
 }
 
 class _Wordmark extends StatelessWidget {
-  const _Wordmark({required this.punctum, this.compact = false});
+  const _Wordmark({
+    required this.punctum,
+    required this.homeLabel,
+    this.compact = false,
+  });
 
   final Color punctum;
+  final String homeLabel;
   final bool compact;
 
   @override
@@ -185,7 +242,7 @@ class _Wordmark extends StatelessWidget {
       child: FButton(
         variant: FButtonVariant.ghost,
         mainAxisSize: MainAxisSize.min,
-        semanticsLabel: 'Penumbra home',
+        semanticsLabel: homeLabel,
         onPress: () => context.go('/'),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -213,10 +270,23 @@ class _Wordmark extends StatelessWidget {
 }
 
 class _OverflowNav extends StatelessWidget {
-  const _OverflowNav({required this.signedIn, this.includeMakingOf = false});
+  const _OverflowNav({
+    required this.signedIn,
+    required this.makingOf,
+    required this.legal,
+    required this.boards,
+    required this.privacy,
+    required this.menuLabel,
+    this.includeMakingOf = false,
+  });
 
   final bool signedIn;
   final bool includeMakingOf;
+  final String makingOf;
+  final String legal;
+  final String boards;
+  final String privacy;
+  final String menuLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -226,20 +296,17 @@ class _OverflowNav extends StatelessWidget {
           children: [
             if (includeMakingOf)
               FItem(
-                title: const Text('Making of'),
+                title: Text(makingOf),
                 onPress: () => context.go('/making-of'),
               ),
             FItem(
-              title: const Text('Legal'),
+              title: Text(legal),
               onPress: () => context.go('/legal/privacy'),
             ),
             if (signedIn) ...[
+              FItem(title: Text(boards), onPress: () => context.go('/boards')),
               FItem(
-                title: const Text('Boards'),
-                onPress: () => context.go('/boards'),
-              ),
-              FItem(
-                title: const Text('Privacy'),
+                title: Text(privacy),
                 onPress: () => context.go('/privacy'),
               ),
             ],
@@ -247,7 +314,7 @@ class _OverflowNav extends StatelessWidget {
         ),
       ],
       builder: (context, controller, _) => FButton.icon(
-        semanticsLabel: 'Open menu',
+        semanticsLabel: menuLabel,
         onPress: () => controller.toggle(),
         child: const Icon(FLucideIcons.menu),
       ),
@@ -305,6 +372,6 @@ Future<void> announce(BuildContext context, String message) async {
   await SemanticsService.sendAnnouncement(
     View.of(context),
     message,
-    TextDirection.ltr,
+    Directionality.of(context),
   );
 }

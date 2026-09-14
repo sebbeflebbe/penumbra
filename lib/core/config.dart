@@ -8,11 +8,16 @@ class PenumbraConfig {
     required this.controllerEmail,
     required this.productionOrigin,
     this.geminiApiKey = '',
+    this.bankIdIssuer = '',
+    this.bankIdClientId = '',
   });
 
   factory PenumbraConfig.fromEnvironment() {
     const url = String.fromEnvironment('SUPABASE_URL');
     const anon = String.fromEnvironment('SUPABASE_ANON_KEY');
+    const issuer = String.fromEnvironment('BANKID_ISSUER');
+    const clientId = String.fromEnvironment('BANKID_CLIENT_ID');
+    resolveEidMode(bankIdIssuer: issuer, bankIdClientId: clientId);
     return PenumbraConfig(
       supabaseUrl: url,
       supabaseAnonKey: anon,
@@ -29,6 +34,8 @@ class PenumbraConfig {
         defaultValue: 'http://localhost',
       ),
       geminiApiKey: const String.fromEnvironment('GEMINI_API_KEY'),
+      bankIdIssuer: issuer,
+      bankIdClientId: clientId,
     );
   }
 
@@ -38,6 +45,8 @@ class PenumbraConfig {
   final String controllerEmail;
   final String productionOrigin;
   final String geminiApiKey;
+  final String bankIdIssuer;
+  final String bankIdClientId;
 
   bool get hasRemoteBackend =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
@@ -46,6 +55,11 @@ class PenumbraConfig {
   StudioMode get studioMode => resolveStudioMode(
     supabaseUrl: supabaseUrl,
     supabaseAnonKey: supabaseAnonKey,
+  );
+
+  EidMode get eidMode => resolveEidMode(
+    bankIdIssuer: bankIdIssuer,
+    bankIdClientId: bankIdClientId,
   );
 }
 
@@ -65,4 +79,22 @@ StudioMode resolveStudioMode({
     );
   }
   return StudioMode.supabase;
+}
+
+enum EidMode { unset, configured }
+
+/// Both BankID dart-defines, or neither. A half-set config fails closed.
+EidMode resolveEidMode({
+  required String bankIdIssuer,
+  required String bankIdClientId,
+}) {
+  final issuer = bankIdIssuer.trim();
+  final clientId = bankIdClientId.trim();
+  if (issuer.isEmpty && clientId.isEmpty) return EidMode.unset;
+  if (issuer.isEmpty || clientId.isEmpty) {
+    throw ArgumentError(
+      'BankID config is half-set. Set both BANKID_ISSUER and BANKID_CLIENT_ID, or neither.',
+    );
+  }
+  return EidMode.configured;
 }

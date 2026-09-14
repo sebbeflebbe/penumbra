@@ -11,11 +11,13 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import '../../core/crypto/key_derivation.dart';
 import '../../core/crypto/payload_cipher.dart';
 import '../../core/crypto/recovery_phrase.dart';
+import '../../core/config.dart';
 import '../../core/errors.dart';
 import '../../core/logging/security_log.dart';
 import '../../core/result.dart';
 import '../auth/data/passkey_ceremony_factory.dart';
 import '../auth/domain/auth_models.dart';
+import '../auth/domain/eid.dart';
 import '../auth/domain/passkey_ceremony.dart';
 import '../boards/domain/board.dart';
 import '../boards/domain/echo_pairing.dart';
@@ -35,6 +37,7 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
     Random? random,
     String? redirectTo,
     PasskeyCeremony? passkeys,
+    EidMode eidMode = EidMode.unset,
   }) : _client = client,
        _wordlist = wordlist,
        _store = store,
@@ -42,7 +45,8 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
        _derivation = derivation ?? KeyDerivation(),
        _random = random ?? Random.secure(),
        _redirectTo = redirectTo,
-       _passkeys = passkeys ?? createPasskeyCeremony() {
+       _passkeys = passkeys ?? createPasskeyCeremony(),
+       _eidMode = eidMode {
     _authSub = _client.auth.onAuthStateChange.listen((data) {
       if (_holdListener) return;
       unawaited(_onSession(data.session, wrappingSecret: null));
@@ -58,6 +62,7 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   final Random _random;
   final String? _redirectTo;
   final PasskeyCeremony _passkeys;
+  final EidMode _eidMode;
 
   final _controller = StreamController<AuthUser?>.broadcast();
   StreamSubscription<AuthState>? _authSub;
@@ -285,6 +290,11 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   @override
   Future<Result<AuthUser, AuthFailure>> signInWithGitHub() =>
       _federated(OAuthProvider.github);
+
+  @override
+  Future<Result<AuthUser, AuthFailure>> signInWithBankId() async {
+    return Err(bankIdUnavailable(configured: _eidMode == EidMode.configured));
+  }
 
   @override
   Future<Result<AuthUser, AuthFailure>> signInWithPasskey() async {
@@ -752,6 +762,32 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
   }
 
   @override
+  Future<Result<List<SecurityEvent>, AppFailure>> securityEvents() async {
+    final user = _current;
+    if (user == null) return const Err(UnauthenticatedFailure());
+    try {
+      final rows = await _client
+          .from('security_events')
+          .select()
+          .eq('user_id', user.id)
+          .order('at');
+      return Ok([
+        for (final row in rows as List)
+          SecurityEvent(
+            type: _securityType(
+              (row as Map<String, dynamic>)['type'] as String?,
+            ),
+            at: DateTime.parse(row['at'] as String).toUtc(),
+            userId: row['user_id'] as String?,
+            detail: row['detail'] as String?,
+          ),
+      ]);
+    } on Object catch (error) {
+      return Err(_mapPostgrest(error));
+    }
+  }
+
+  @override
   Future<Result<ConsentEvent, AppFailure>> recordConsent(
     ConsentKind kind, {
     required bool granted,
@@ -808,6 +844,8 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
         }
         final consentRows =
             (await consents()).okOrNull ?? const <ConsentEvent>[];
+        final eventRows =
+            (await securityEvents()).okOrNull ?? const <SecurityEvent>[];
         return Ok(
           PrivacyExport(
             generatedAt: clock.now().toUtc(),
@@ -834,6 +872,14 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
                   'kind': c.kind.name,
                   'granted': c.granted,
                   'at': c.at.toIso8601String(),
+                },
+            ],
+            securityEvents: [
+              for (final event in eventRows)
+                {
+                  'at': event.at.toIso8601String(),
+                  'type': event.type.name,
+                  'detail': event.detail,
                 },
             ],
           ),
@@ -1127,6 +1173,8 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
           out.add(AuthMethod.magicLink);
         case 'webauthn':
           out.add(AuthMethod.passkey);
+        case 'bankid':
+          out.add(AuthMethod.bankId);
       }
     }
     if (out.isEmpty) out.add(AuthMethod.magicLink);
@@ -1148,6 +1196,13 @@ class SupabaseStudio implements AuthRepository, PrivacyRepository {
       if (kind.name == name) return kind;
     }
     return ConsentKind.necessaryStorage;
+  }
+
+  SecurityEventType _securityType(String? name) {
+    for (final type in SecurityEventType.values) {
+      if (type.name == name) return type;
+    }
+    return SecurityEventType.signInSuccess;
   }
 
   void _setCurrent(AuthUser user) {

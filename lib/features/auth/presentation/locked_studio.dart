@@ -4,6 +4,7 @@ import 'package:forui/forui.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/a11y/motion.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/chrome.dart';
 
 class LockedStudio extends ConsumerStatefulWidget {
@@ -40,7 +41,7 @@ class _LockedStudioState extends ConsumerState<LockedStudio> {
       _error = failure?.message;
     });
     if (failure == null) {
-      announce(context, 'Notes unlocked.');
+      announce(context, AppLocalizations.of(context).notesUnlocked);
       widget.onUnlocked?.call();
     }
   }
@@ -48,6 +49,7 @@ class _LockedStudioState extends ConsumerState<LockedStudio> {
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+    final l10n = AppLocalizations.of(context);
     return PenumbraPage(
       maxWidth: 480,
       child: Padding(
@@ -56,12 +58,12 @@ class _LockedStudioState extends ConsumerState<LockedStudio> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Unlock this studio',
+              l10n.unlockTitle,
               style: theme.typography.xl3.copyWith(fontWeight: FontWeight.w500),
             ).penumbraEnter(context),
             const SizedBox(height: 10),
             Text(
-              'This device does not have the wrapping key. Enter the twelve-word recovery phrase shown when you first signed in.',
+              l10n.unlockBody,
               style: theme.typography.sm.copyWith(
                 color: theme.colors.mutedForeground,
                 height: 1.5,
@@ -73,8 +75,8 @@ class _LockedStudioState extends ConsumerState<LockedStudio> {
               const SizedBox(height: 16),
             ],
             FTextField(
-              label: const Text('Recovery phrase'),
-              description: const Text('Twelve words, in order.'),
+              label: Text(l10n.recoveryPhraseLabel),
+              description: Text(l10n.recoveryPhraseHint),
               minLines: 2,
               maxLines: 3,
               control: FTextFieldControl.managed(controller: _phrase),
@@ -82,10 +84,10 @@ class _LockedStudioState extends ConsumerState<LockedStudio> {
             const SizedBox(height: 16),
             Semantics(
               button: true,
-              label: 'Unlock with recovery phrase',
+              label: l10n.unlockSemantics,
               child: FButton(
                 onPress: _busy ? null : _unlock,
-                child: const Text('Unlock'),
+                child: Text(l10n.unlock),
               ),
             ),
           ],

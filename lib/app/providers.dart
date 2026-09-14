@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config.dart';
@@ -75,6 +76,7 @@ class AuthController extends StateNotifier<AsyncValue<AuthUser?>> {
   Future<AuthFailure?> google() => _unwrap(_auth.signInWithGoogle());
   Future<AuthFailure?> github() => _unwrap(_auth.signInWithGitHub());
   Future<AuthFailure?> passkey() => _unwrap(_auth.signInWithPasskey());
+  Future<AuthFailure?> bankId() => _unwrap(_auth.signInWithBankId());
   Future<AuthFailure?> demo() => _unwrap(_auth.enterDemoStudio());
   Future<AuthFailure?> unlockPhrase(String phrase) =>
       _unwrap(_auth.unlockWithRecoveryPhrase(phrase));
@@ -118,3 +120,31 @@ final appearanceProvider =
     StateNotifierProvider<AppearanceController, PenumbraAppearance>(
       (ref) => AppearanceController(),
     );
+
+class LocaleController extends StateNotifier<Locale> {
+  LocaleController({DeviceStore? store, Locale initial = const Locale('en')})
+    : _store = store ?? MemoryDeviceStore(),
+      super(initial);
+
+  static const storageKey = 'penumbra.locale';
+
+  final DeviceStore _store;
+
+  void toggle() =>
+      set(state.languageCode == 'sv' ? const Locale('en') : const Locale('sv'));
+
+  void set(Locale value) {
+    final next = localeFromName(value.languageCode);
+    state = next;
+    unawaited(_store.write(storageKey, next.languageCode));
+  }
+}
+
+Locale localeFromName(String? name) {
+  if (name == 'sv') return const Locale('sv');
+  return const Locale('en');
+}
+
+final localeProvider = StateNotifierProvider<LocaleController, Locale>(
+  (ref) => LocaleController(),
+);
